@@ -103,7 +103,23 @@ function identityMismatch(apid, url) {
 
 async function loadToken() {
   const stored = await chrome.storage.local.get(TOKEN_KEY);
-  return stored[TOKEN_KEY] || "";
+  if (stored[TOKEN_KEY]) return stored[TOKEN_KEY];
+  // v0.2 — no token saved yet: ask the local backend for it. It hands it only to this
+  // extension (it checks the request's browser-set Origin), so nobody has to paste it.
+  return await pairWithBackend();
+}
+
+async function pairWithBackend() {
+  try {
+    const resp = await fetch(BACKEND.replace(/\/capture$/, "/pair"), { method: "POST" });
+    if (!resp.ok) return "";
+    const body = await resp.json();
+    if (!body || typeof body.token !== "string" || !body.token) return "";
+    await chrome.storage.local.set({ [TOKEN_KEY]: body.token });
+    return body.token;
+  } catch (_e) {
+    return ""; // backend not running: the caller says so
+  }
 }
 
 // FastAPI's `detail` is a string for our own HTTPExceptions but a list of
@@ -214,8 +230,8 @@ async function doCapture(msg, tabId) {
     return {
       ok: false,
       error:
-        "No Capsule token saved. Open the Capsule popup once and paste the token " +
-        "printed by `capsule serve`, then trigger the capture again.",
+        "Capsule is not paired yet. Make sure `capsule serve` is running, then try again " +
+        "(or paste the token printed by `capsule serve` into the Capsule popup).",
     };
   }
 
@@ -349,12 +365,13 @@ async function postAndShape(o) {
     image_skipped: o.imageSkipped || undefined,
   };
 
+  let token = o.token;
   const send = (p) =>
     fetch(BACKEND, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Capsule-Token": o.token,
+        "X-Capsule-Token": token,
         // BUG-021: which build sent this capture, recorded in its manifest. A header, so an
         // older backend ignores it rather than 422ing the capture.
         "X-Capsule-Extension-Version": chrome.runtime.getManifest().version,
@@ -371,6 +388,21 @@ async function postAndShape(o) {
     resp = await send(payload);
   } catch (err) {
     return unreachable;
+  }
+  // v0.2 — a 401 means the saved token is stale (Capsule was reinstalled or its archive moved,
+  // and the backend has a new one). The backend refused before doing anything, so forget the
+  // old token, pair again by itself, and send ONCE more.
+  if (resp.status === 401) {
+    await chrome.storage.local.remove(TOKEN_KEY);
+    const fresh = await pairWithBackend();
+    if (fresh && fresh !== token) {
+      token = fresh;
+      try {
+        resp = await send(payload);
+      } catch (err) {
+        return unreachable;
+      }
+    }
   }
   let body = await resp.json().catch(() => ({}));
 
@@ -433,6 +465,9 @@ async function postAndShape(o) {
     record_type: body.record_type || null,
     assertion_count: Array.isArray(body.assertions) ? body.assertions.length : 0,
     verify_ok: !!body.verify_ok,
+    // v0.2 — archived with no Anthropic key: the record has not been READ yet. Not a
+    // reading that found nothing, and the toast must not let it look like one.
+    extraction_pending: !!body.extraction_pending,
     // WHY verify failed when every byte is intact (REQ-007 §3.3). `verify_ok` alone is a
     // bare boolean, and on a zoomed export it reads `verify FAILED` beside `IMAGE full` —
     // two true statements that contradict each other. Without this the toast and the
@@ -523,8 +558,8 @@ async function captureAncestryImage(msg, tabId) {
     return {
       ok: false,
       error:
-        "No Capsule token saved. Open the Capsule popup once and paste the token " +
-        "printed by `capsule serve`, then trigger the capture again.",
+        "Capsule is not paired yet. Make sure `capsule serve` is running, then try again " +
+        "(or paste the token printed by `capsule serve` into the Capsule popup).",
     };
   }
 

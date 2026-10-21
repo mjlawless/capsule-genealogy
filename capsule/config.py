@@ -59,6 +59,18 @@ def work_queue_enabled() -> bool:
     return os.environ.get("CAPSULE_ENABLE_WORK_QUEUE", "").strip().lower() in {"1", "true", "yes"}
 
 
+#: The Chrome extension IDs allowed to pair without a pasted token (v0.2). The first is the
+#: unpacked extension's: `extension/manifest.json` carries a public `key`, so Chrome gives it
+#: this same ID on every machine (a test pins the two together). A Chrome Web Store build gets
+#: its own ID; add it with CAPSULE_EXTENSION_IDS (comma-separated).
+CAPSULE_EXTENSION_ID = "jalijanpiopkphjagoiofcofclmmmaan"
+
+
+def pairable_extension_ids() -> frozenset[str]:
+    extra = os.environ.get("CAPSULE_EXTENSION_IDS", "")
+    return frozenset({CAPSULE_EXTENSION_ID} | {i.strip() for i in extra.split(",") if i.strip()})
+
+
 def token_path() -> Path:
     """Where `capsule serve` keeps the extension pairing token (beside the database)."""
     return data_dir() / ".capsule-token"

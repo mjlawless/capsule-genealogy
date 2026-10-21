@@ -37,3 +37,11 @@ def _no_real_dotenv(monkeypatch):
     import capsule.cli.app as cli
 
     monkeypatch.setattr(cli, "DOTENV_FILE", cli.Path(".env.never-loaded-by-tests"))
+
+
+@pytest.fixture(autouse=True)
+def _no_ambient_api_key(monkeypatch):
+    """Every test starts with no ANTHROPIC_API_KEY and leaves none behind. `set_api_key` (v0.2)
+    exports the key into the process environment so it works without a restart; without this,
+    one test's key would leak into every test after it."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)

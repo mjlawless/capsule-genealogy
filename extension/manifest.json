@@ -1,8 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "Capsule \u2014 page-in-view capture",
-  "version": "0.1.0",
+  "name": "Capsule — page-in-view capture",
+  "version": "0.2.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArUqhQSVxRKL51fvyHVoy75r2nUjzbYbxvdBAwg1SQkGfvLGriuMaW2GbdpYJS/mlLLu3/UJYegtfj+YArX9H/PAZPMG29QRjDzm0XR8liv5A8Zh6F1t9GoNNBlCG/td3r2BDKt0KJlsmGSk1SswWSUmiaJJdOn8LnzpT4UDXTtPs7JN3KxD7TsTuc/hek5193bcYOI0I7NV30tokH4DhUvdOiRa3abfsIV7Y2OUfo5riD3phSsTuWQ91oJoh4xPFO2h+v9DhAhRPVa5zp55GWnyzof4mg3lznfYmwd1LxF+orYBMYpDU49tzAaNZoZzIUIuygDCLAWzvdL1o6mHLoQIDAQAB",
   "description": "Capture the genealogy page you are viewing into your local Capsule backend.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "permissions": [
     "activeTab",
     "scripting",
@@ -19,7 +26,11 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Capture this page with Capsule"
+    "default_title": "Capture this page with Capsule",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
   },
   "background": {
     "service_worker": "background.js"

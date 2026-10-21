@@ -1,6 +1,6 @@
 [project]
 name = "capsule"
-version = "0.1.0"
+version = "0.2.0"
 description = "Evidence-grade genealogy capture — turn a web page into an archived, cited, tree-ready source."
 requires-python = ">=3.12"
 dependencies = [

@@ -132,8 +132,9 @@ def _setup(args, keyboard, monkeypatch, *, problem=None):
     from typer.testing import CliRunner
 
     import capsule.cli.app as cli
+    import capsule.credentials as credentials
 
-    monkeypatch.setattr(cli, "validate_api_key", lambda key: problem)
+    monkeypatch.setattr(credentials, "validate_api_key", lambda key: problem)
     return CliRunner().invoke(cli.app, ["setup", *args], input=keyboard)
 
 
@@ -208,3 +209,29 @@ def test_found_an_upgrade_keeps_the_legacy_token(elsewhere, monkeypatch):
     assert token == "the-paired-token" and "carried over" in how
     assert (tmp_path / "archive" / ".capsule-token").read_text().strip() == "the-paired-token"
     assert resolve_token()[1].startswith("reused")
+
+
+def test_setup_no_key_never_prompts(elsewhere, fake_keyring, monkeypatch):
+    """The installer runs setup unattended; the key is added later in the extension."""
+    result = _setup(["--no-key"], "", monkeypatch)
+    assert result.exit_code == 0, result.output
+    assert "not set" in result.output and "API key" in result.output
+    assert fake_keyring.saved is None
+
+
+def test_found_dotenv_paths_are_read_literally(tmp_path, monkeypatch):
+    """Codex review: the installer writes CAPSULE_DATA_DIR to .env single-quoted and escaped;
+    the CLI must read it back exactly: no comment-stripping at ` #`, no `${...}` expansion."""
+    import capsule.cli.app as cli
+
+    weird = str(tmp_path / "Jo's ${HOME} #1 archive")
+    escaped = weird.replace("\\", "\\\\").replace("'", "\\'")
+    (tmp_path / ".env").write_text(f"CAPSULE_DATA_DIR='{escaped}'\n", encoding="utf-8")
+    monkeypatch.setattr(cli, "DOTENV_FILE", cli.Path(".env"))
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CAPSULE_DATA_DIR", raising=False)
+    assert cli._load_dotenv() is True
+    import os
+
+    assert os.environ["CAPSULE_DATA_DIR"] == weird
+    monkeypatch.delenv("CAPSULE_DATA_DIR")

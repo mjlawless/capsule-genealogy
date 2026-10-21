@@ -594,8 +594,10 @@ def test_cors_allows_extension_origin_not_web_page(tmp_path):
         backend.app.dependency_overrides.clear()
 
 
-def test_post_capture_without_api_key_returns_503(tmp_path, monkeypatch):
-    """With no key and the REAL provide_agent, the endpoint must 503, not 500."""
+def test_post_capture_without_api_key_archives_with_extraction_pending(tmp_path, monkeypatch):
+    """v0.2 contract change (was: 503). With no key and the REAL provide_agent, the page is
+    archived now and its extraction is marked PENDING, so an evaluator sees Capsule work
+    before entering a key, and the capture never reads as a failed reading."""
     from fastapi.testclient import TestClient
 
     from capsule.backend.app import Settings, app, get_settings
@@ -606,11 +608,22 @@ def test_post_capture_without_api_key_returns_503(tmp_path, monkeypatch):
     )
     app.dependency_overrides[get_settings] = lambda: settings
     try:
-        resp = TestClient(app).post(
-            "/capture", json={"url": _NYC_URL, "html": _PAGE}, headers=_AUTH
-        )
-        assert resp.status_code == 503
-        assert "ANTHROPIC_API_KEY" in resp.json()["detail"]
+        client = TestClient(app)
+        resp = client.post("/capture", json={"url": _NYC_URL, "html": _PAGE}, headers=_AUTH)
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["extraction_pending"] is True
+        assert body["verify_ok"] is True  # not "read and found nothing"
+        assert body["assertions"] == []
+        from pathlib import Path
+
+        folder = Path(body["capture_folder"])
+        manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
+        assert manifest["extraction"] == "pending"
+        assert not (folder / "agent_log").exists()  # no model call was made
+        # A pending capture does not block capturing the page again once a key exists.
+        again = client.post("/capture", json={"url": _NYC_URL, "html": _PAGE}, headers=_AUTH)
+        assert again.status_code == 200, again.text
     finally:
         app.dependency_overrides.clear()
 

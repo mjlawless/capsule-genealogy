@@ -388,10 +388,13 @@ def test_two_rapid_dispatches_yield_exactly_one_capture(tmp_path):
 
 
 def test_inflight_identity_is_released_when_the_capture_fails(tmp_path):
-    """A failed capture must not leave its identity claimed forever (review):
-    the 503 (no agent) raises inside the guarded section; a retry must proceed."""
+    """A failed capture must not leave its identity claimed forever (review): an
+    unparseable model reply raises inside the guarded section; a retry must proceed.
+    (This used "no API key -> 503"; since v0.2 a missing key archives instead.)"""
     from fastapi.testclient import TestClient
 
+    from capsule.agent.base import Agent
+    from capsule.agent.fake import FakeTransport
     from capsule.backend import app as backend
     from capsule.backend.app import Settings, app, get_settings, provide_agent
 
@@ -401,15 +404,18 @@ def test_inflight_identity_is_released_when_the_capture_fails(tmp_path):
         token=_TOKEN,
     )
     app.dependency_overrides[get_settings] = lambda: settings
-    app.dependency_overrides[provide_agent] = lambda: None  # no API key configured
+    app.dependency_overrides[provide_agent] = lambda: Agent(
+        name="extractor", model="m", transport=FakeTransport("this is not JSON")
+    )
     body = {"url": _RI_URL, "html": _PAGE, "gating": "gated"}
     try:
         client = TestClient(app)
-        assert client.post("/capture", json=body, headers=_AUTH).status_code == 503
-        # The identity was released on failure — the retry reaches 503 again
-        # (same refusal), NOT the in-flight 409.
+        first = client.post("/capture", json=body, headers=_AUTH)
+        assert first.status_code >= 400 and first.status_code != 409, first.text
+        # The identity was released on failure — the retry fails the SAME way, NOT with
+        # the in-flight 409.
         retry = client.post("/capture", json=body, headers=_AUTH)
-        assert retry.status_code == 503, retry.text
+        assert retry.status_code == first.status_code, retry.text
     finally:
         backend.app.dependency_overrides.clear()
 

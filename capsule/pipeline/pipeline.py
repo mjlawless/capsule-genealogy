@@ -28,6 +28,7 @@ from capsule.agent.base import Agent, AgentCall
 from capsule.capture.manifest import (
     Extraction,
     MediaItem,
+    Redaction,
     VerifyResult,
     verify_capture,
     write_capture,
@@ -47,7 +48,7 @@ from capsule.pipeline.build import (
     build_document_capture_models,
 )
 from capsule.pipeline.ancestry import is_ancestry_url
-from capsule.pipeline.extract import build_extraction_prompt, parse_extraction
+from capsule.pipeline.extract import RawExtraction, build_extraction_prompt, parse_extraction
 from capsule.pipeline.failure_log import record_unwritten_call
 from capsule.pipeline.fetch import Fetcher
 from capsule.pipeline.household import parse_household
@@ -74,7 +75,7 @@ def run_capture(
     url: str,
     *,
     fetcher: Fetcher,
-    agent: Agent,
+    agent: Optional[Agent],
     repository: Repository,
     captures_root: Union[str, Path],
     media: Sequence[MediaItem] = (),
@@ -86,6 +87,8 @@ def run_capture(
     page_label: Optional[str] = None,
     media_warnings: Sequence[str] = (),
     extension_version: Optional[str] = None,
+    prior_redactions: Optional[Sequence[Redaction]] = None,
+    extracted_from: Optional[str] = None,
 ) -> CaptureOutcome:
     """Capture `url` into a verifiable folder + append-only evidence rows.
 
@@ -97,6 +100,11 @@ def run_capture(
     `note` is an optional researcher annotation ("why I collected this"). It is
     the user's own words, not evidence — stored in the excluded `notes.json` and
     the append-only `capture_note` table, never in the hashed evidence.
+
+    `agent=None` (v0.2, no API key yet) archives the page with NO model call: the
+    snapshot, media and citation are written now and the extraction is empty and marked
+    `pending` in the manifest. That is not a failed reading, and `verify_capture` does not
+    treat it as one; reading it later makes a new capture that supersedes this one.
     """
     now = now or (lambda: datetime.now(timezone.utc))
     new_id = new_id or (lambda: uuid.uuid4().hex)
@@ -111,8 +119,13 @@ def run_capture(
     # all describe the same document. Order matters — `fetcher.fetch` has already run
     # gating detection against the raw HTML, and the redactor deliberately leaves the
     # logout marker in place so the written snapshot still evidences its own gating.
-    redacted_html, redactions = redact_account_chrome(snapshot.html)
-    snapshot = replace(snapshot, html=redacted_html)
+    if prior_redactions is None:
+        redacted_html, redactions = redact_account_chrome(snapshot.html)
+        snapshot = replace(snapshot, html=redacted_html)
+    else:
+        # `capsule extract` re-reads a snapshot that was ALREADY redacted when it was
+        # archived; the original capture's declaration carries over unchanged.
+        redactions = tuple(prior_redactions)
 
     # REQ-003: member record IDs from the page's own Household table — parsed from
     # the same redacted HTML that becomes snapshot.html, so the block is re-derivable
@@ -120,13 +133,18 @@ def run_capture(
     # output, never fatal to the capture.
     household = parse_household(snapshot.html, page_url=url) if is_ancestry_url(url) else ()
 
-    prompt = build_extraction_prompt(snapshot)
-    call = agent.run(prompt.user, system=prompt.system)  # the single model call
+    if agent is None:
+        call = None
+        raw = RawExtraction(record_type="", personas=[], assertions=[])
+    else:
+        prompt = build_extraction_prompt(snapshot)
+        call = agent.run(prompt.user, system=prompt.system)  # the single model call
     # The call has now been paid for. If anything downstream fails, the record
     # must still land on disk (transport-failure logging is the Agent sink's job;
     # this covers a *successful* call whose capture then fails to build/write).
     try:
-        raw = parse_extraction(call.response)
+        if call is not None:
+            raw = parse_extraction(call.response)
         built = build_capture_models(
             snapshot, raw, new_id=new_id, now=frozen_now, page_label=page_label
         )
@@ -140,7 +158,7 @@ def run_capture(
             media=media,
             redactions=redactions,
             notes=notes,
-            agent_logs={call.log_filename: call.to_log()},
+            agent_logs={call.log_filename: call.to_log()} if call is not None else None,
             created_at=moment,
             # R4.3 — the folder must be able to say, on its own, what its record image IS.
             image_status=image_status,
@@ -150,10 +168,13 @@ def run_capture(
             # here, because a warning that lives only in a toast is gone by morning.
             media_warnings=media_warnings,
             extension_version=extension_version,
+            extraction_pending=call is None,
+            extracted_from=extracted_from,
         )
         _persist(repository, built, notes=notes)
     except Exception:
-        record_unwritten_call(captures_root, call)
+        if call is not None:
+            record_unwritten_call(captures_root, call)
         raise
     outcome = CaptureOutcome(
         capture_folder=folder,

@@ -18,6 +18,13 @@
   const EVENT = "capsule:capture";
   const BTN_ID = "capsule-capture-btn";
   const TOAST_ID = "capsule-toast";
+  const KEY_PROMPT_ID = "capsule-key-prompt";
+  // v0.2 — the "connect an API key" prompt closes itself after this long (owner: ~15 s), and
+  // "Not today" quiets it for a day so it never nags on every capture.
+  const KEY_PROMPT_MS = 15000;
+  const KEY_PROMPT_SNOOZE_KEY = "capsuleKeyPromptSnoozedUntil";
+  const KEY_PROMPT_SNOOZE_MS = 24 * 60 * 60 * 1000;
+  const ANTHROPIC_KEYS_URL = "https://console.anthropic.com/settings/keys";
 
   function toast(text, ok) {
     let el = document.getElementById(TOAST_ID);
@@ -34,6 +41,104 @@
     el.textContent = text;
     clearTimeout(el._t);
     el._t = setTimeout(() => el.remove(), 6000);
+  }
+
+  // v0.2 — after a capture made WITHOUT an Anthropic key, say once, briefly, what a key adds.
+  // The capture itself already did everything that needs no AI (page, PDF, record image,
+  // citation, hashes). Dismissable (x), self-dismissing after KEY_PROMPT_MS (paused while the
+  // mouse is over it, so it never vanishes mid-read), and "Not today" snoozes it for a day.
+  // Built with textContent only: nothing from the page or the backend is rendered as HTML.
+  async function showKeyPrompt(withImage) {
+    try {
+      const got = await chrome.storage.local.get(KEY_PROMPT_SNOOZE_KEY);
+      if ((got[KEY_PROMPT_SNOOZE_KEY] || 0) > Date.now()) return;
+    } catch (_e) {
+      // storage unavailable: show it anyway
+    }
+    document.getElementById(KEY_PROMPT_ID)?.remove();
+    const card = document.createElement("div");
+    card.id = KEY_PROMPT_ID;
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-label", "Connect an Anthropic API key to Capsule");
+    card.style.cssText =
+      "position:fixed;bottom:120px;right:12px;z-index:2147483647;max-width:340px;" +
+      "padding:12px 14px;border-radius:8px;font:13px/1.45 system-ui,sans-serif;" +
+      "color:#1f2328;background:#fff;border:1px solid #d0d7de;" +
+      "box-shadow:0 4px 16px rgba(0,0,0,.18);";
+    const add = (tag, text, css) => {
+      const el = document.createElement(tag);
+      el.textContent = text;
+      if (css) el.style.cssText = css;
+      card.appendChild(el);
+      return el;
+    };
+    const close = add("button", "\u00d7",
+      "position:absolute;top:4px;right:6px;border:0;background:none;font-size:18px;" +
+      "cursor:pointer;color:#57606a;");
+    close.setAttribute("aria-label", "Dismiss");
+    add("div", "Archived. Want Capsule to read it too?", "font-weight:600;margin-bottom:6px;");
+    add("div",
+      (withImage
+        ? "This page is saved with its record image, citation and fingerprints. "
+        : "This page is saved with its citation and fingerprints. ") +
+        "With your own Anthropic API key, Capsule also:", "margin-bottom:4px;");
+    const list = document.createElement("ul");
+    list.style.cssText = "margin:0 0 8px 18px;padding:0;";
+    for (const benefit of [
+      "lists every person, date and place in the record, each linked to the words it came from",
+      "marks each fact as stated, calculated or estimated",
+      "reads handwritten scans like certificates and registers",
+      "reads the pages you have already archived, so nothing needs capturing again",
+    ]) {
+      const li = document.createElement("li");
+      li.textContent = benefit;
+      list.appendChild(li);
+    }
+    card.appendChild(list);
+    add("div",
+      "The key is yours and is billed to you by Anthropic; it stays on this computer. Get one, " +
+      "then click the Capsule icon in your toolbar to add it.", "margin-bottom:8px;color:#57606a;");
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:8px;";
+    const get = document.createElement("a");
+    get.textContent = "Get a key \u2197";
+    get.href = ANTHROPIC_KEYS_URL;
+    get.target = "_blank";
+    get.rel = "noopener noreferrer";
+    get.style.cssText =
+      "padding:4px 10px;border-radius:6px;background:#1a7f37;color:#fff;text-decoration:none;";
+    const later = document.createElement("button");
+    later.textContent = "Not today";
+    later.style.cssText =
+      "padding:4px 10px;border-radius:6px;border:1px solid #d0d7de;background:#f6f8fa;" +
+      "cursor:pointer;";
+    row.append(get, later);
+    card.appendChild(row);
+
+    let timer = null;
+    const dismiss = () => {
+      clearTimeout(timer);
+      card.remove();
+    };
+    const arm = () => {
+      clearTimeout(timer);
+      timer = setTimeout(dismiss, KEY_PROMPT_MS);
+    };
+    close.addEventListener("click", dismiss);
+    later.addEventListener("click", async () => {
+      try {
+        await chrome.storage.local.set({
+          [KEY_PROMPT_SNOOZE_KEY]: Date.now() + KEY_PROMPT_SNOOZE_MS,
+        });
+      } catch (_e) {
+        // could not remember the snooze; dismissing is still right
+      }
+      dismiss();
+    });
+    card.addEventListener("mouseenter", () => clearTimeout(timer));
+    card.addEventListener("mouseleave", arm);
+    document.documentElement.appendChild(card);
+    arm();
   }
 
   // A machine-readable capture verdict for the driving agent (live-run finding). The toast
@@ -168,6 +273,8 @@
 
   async function capture(note, opts) {
     if (capturing) return;
+    // The key prompt is Capsule's own UI: it must never be archived as part of a record.
+    document.getElementById(KEY_PROMPT_ID)?.remove();
     capturing = true;
     setCapturing(true);
     const options = opts || {};
@@ -316,17 +423,36 @@
         missed.join("\n• ")
       : "";
 
+    const pendingText = res.extraction_pending
+      ? "\nArchived. Not read yet: add your Anthropic API key in the Capsule popup to read the " +
+        "record."
+      : "";
+
+    // v0.2 — archived without a key: offer, once and briefly, what a key would add. ONLY
+    // after a clean capture: beside a failure, a reassuring card that outlives the red toast
+    // could send someone away from a record that was not saved (Codex review).
+    const clean =
+      res.verify_ok &&
+      !warnings.length &&
+      !missed.length &&
+      (!res.image_status ||
+        res.image_status === "full" ||
+        res.image_status === "index-only-no-image" ||
+        res.image_status === "none");
+    if (res.extraction_pending && clean) showKeyPrompt(res.image_status === "full");
+
     toast(
       "Captured " +
         (res.record_type || "page") +
         " — " +
-        res.assertion_count +
-        " assertion(s), verify " +
+        (res.extraction_pending ? "extraction pending" : res.assertion_count + " assertion(s)") +
+        ", verify " +
         (res.verify_ok ? "OK" : "FAILED") +
         pdf +
         image +
         shortfallText +
         missedText +
+        pendingText +
         downgradeText,
       res.verify_ok &&
         !warnings.length &&
@@ -408,6 +534,8 @@
         return;
       }
       // Grab the record page's own HTML NOW — it carries the fields the extractor needs.
+      // Without Capsule's own key prompt, which must never be archived with a record.
+      document.getElementById(KEY_PROMPT_ID)?.remove();
       const res = await chrome.runtime.sendMessage({
         type: "capsule:capture-ancestry-image",
         apid,

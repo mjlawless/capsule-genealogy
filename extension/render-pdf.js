@@ -70,6 +70,7 @@ const HIDE_SELECTORS = [
   // it: without this the PDF shows our own "Capturing…" toast and pill.
   "#capsule-capture-btn",
   "#capsule-toast",
+  "#capsule-key-prompt",
 ];
 
 // Runs in the page (CDP Runtime.evaluate). Returns what it suppressed, so a heuristic

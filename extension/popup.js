@@ -94,7 +94,29 @@ function filenameFromUrl(url) {
 
 async function loadToken() {
   const stored = await chrome.storage.local.get(TOKEN_KEY);
-  return stored[TOKEN_KEY] || "";
+  if (stored[TOKEN_KEY]) return stored[TOKEN_KEY];
+  // v0.2 — pair automatically: the local backend hands the token to this extension only
+  // (it checks the browser-set Origin). Pasting it by hand still works as a fallback.
+  try {
+    const resp = await fetch(BACKEND.replace(/\/capture$/, "/pair"), { method: "POST" });
+    if (!resp.ok) return "";
+    const body = await resp.json();
+    if (!body || typeof body.token !== "string" || !body.token) return "";
+    await saveToken(body.token);
+    render("Paired with Capsule on this computer. You're ready to capture.");
+    return body.token;
+  } catch (_e) {
+    return ""; // backend not running yet
+  }
+}
+
+// v0.2 — a 401 means the saved token is stale (Capsule was reinstalled, or its archive moved).
+// Forget it and pair again by itself; the user just clicks Capture once more.
+async function repairAfter401() {
+  await chrome.storage.local.remove(TOKEN_KEY);
+  const fresh = await loadToken();
+  if (fresh) document.getElementById("token").value = fresh;
+  return fresh;
 }
 
 async function saveToken(token) {
@@ -106,6 +128,9 @@ async function saveToken(token) {
 // media (the page can't) — it returns http(s) candidates as descriptors for the
 // popup to fetch, and only fetches page-local blob:/data: bytes itself.
 async function grabPage(grabMedia, withBytes, maxItems, maxBytes) {
+  // Capsule's own key prompt (v0.2) is not part of the record: drop it before serializing.
+  const prompt = document.getElementById("capsule-key-prompt");
+  if (prompt) prompt.remove();
   const page = {
     url: location.href,
     html: withBytes ? document.documentElement.outerHTML : "",
@@ -364,7 +389,9 @@ function formatOutcome(body) {
     "gating:   " + body.gating,
     "record:   " + (body.record_type || "(unclassified)"),
     "media:    " + (body.media_count || 0),
-    "assertions (" + body.assertions.length + "):",
+    body.extraction_pending
+      ? "extraction: PENDING — archived without an Anthropic API key; add one to read the record"
+      : "assertions (" + body.assertions.length + "):",
   ];
   for (const a of body.assertions) {
     lines.push(
@@ -452,6 +479,10 @@ async function captureDocument(button, token, note) {
       }),
     });
     const body = await resp.json().catch(() => ({}));
+    if (resp.status === 401 && (await repairAfter401())) {
+      render("Capsule was paired again on this computer. Click Capture once more.");
+      return;
+    }
     if (!resp.ok) {
       render("Error " + resp.status + ": " + errorDetail(body, resp) + hintFor(resp, body));
       return;
@@ -474,7 +505,10 @@ async function onCapture() {
   const button = document.getElementById("capture");
   const token = document.getElementById("token").value.trim();
   if (!token) {
-    render("Paste the auth token printed by `capsule serve` into the Token field first.");
+    render(
+      "Capsule isn't paired yet. Start it (`capsule serve`), reopen this popup, and it pairs " +
+        "by itself; or paste the token printed by `capsule serve` into the Token field."
+    );
     return;
   }
   const note = document.getElementById("note").value.trim() || undefined;
@@ -571,6 +605,10 @@ async function onCapture() {
       body: JSON.stringify({ url: page.url, html: page.html, gating, media, note }),
     });
     const body = await resp.json().catch(() => ({}));
+    if (resp.status === 401 && (await repairAfter401())) {
+      render("Capsule was paired again on this computer. Click Capture once more.");
+      return;
+    }
     if (!resp.ok) {
       render("Error " + resp.status + ": " + errorDetail(body, resp) + hintFor(resp, body));
       return;
@@ -611,12 +649,163 @@ async function onCapture() {
 
 document.getElementById("capture").addEventListener("click", onCapture);
 
+// -- v0.2: the user's own Anthropic key, and captures waiting to be read --------------------
+
+const SETTINGS_BASE = BACKEND.replace(/\/capture$/, "");
+
+async function settingsFetch(path, init) {
+  const token = document.getElementById("token").value.trim();
+  if (!token) return { ok: false, status: 0, body: { detail: "Paste the pairing token first." } };
+  const resp = await fetch(SETTINGS_BASE + path, {
+    ...(init || {}),
+    headers: { "Content-Type": "application/json", "X-Capsule-Token": token },
+  });
+  const body = await resp.json().catch(() => ({}));
+  return { ok: resp.ok, status: resp.status, body };
+}
+
+async function refreshKeyStatus() {
+  const statusEl = document.getElementById("key-status");
+  const details = document.getElementById("key-settings");
+  const pendingRow = document.getElementById("pending-row");
+  let res;
+  try {
+    res = await settingsFetch("/settings/status");
+  } catch (err) {
+    statusEl.textContent = "backend not running";
+    return null;
+  }
+  if (!res.ok) {
+    statusEl.textContent = res.status === 401 ? "pair first (token)" : "unknown";
+    return null;
+  }
+  const s = res.body;
+  statusEl.textContent =
+    s.api_key === "set" ? "set ✓" : "not set (captures are archived but not read)";
+  if (s.api_key !== "set") details.open = true;
+  const reading = s.reading || {};
+  if (reading.running) {
+    pendingRow.hidden = false;
+    document.getElementById("pending-text").textContent =
+      "Reading captures: " + reading.done + " of " + reading.total + "…";
+    document.getElementById("read-pending").disabled = true;
+  } else if (s.pending > 0) {
+    pendingRow.hidden = false;
+    // The last run's failure is shown again when the popup reopens, not just once.
+    if (reading.failed || reading.last_error) render(readingSummary(reading));
+    document.getElementById("pending-text").textContent =
+      s.pending + " capture(s) waiting to be read.";
+    document.getElementById("read-pending").disabled = s.api_key !== "set";
+  } else {
+    pendingRow.hidden = true;
+  }
+  return s;
+}
+
+// Never call a run that failed a success (Codex review): say what was read, what was not, and why.
+function readingSummary(reading) {
+  const r = reading || {};
+  if (!r.failed && !r.last_error) {
+    return "Finished reading " + (r.done || 0) + " capture(s). Open the Capsule index to see them.";
+  }
+  return (
+    "Read " + (r.done || 0) + " of " + (r.total || 0) + " capture(s); " + (r.failed || 0) +
+    " could not be read.\nLast problem: " + (r.last_error || "unknown") +
+    "\nNothing was lost: those captures are still archived, and you can try again."
+  );
+}
+
+async function onSaveKey() {
+  const input = document.getElementById("api-key");
+  const key = input.value.trim();
+  if (!key) {
+    render("Paste your Anthropic API key first.");
+    return;
+  }
+  render("Checking the key with Anthropic…");
+  let res;
+  try {
+    res = await settingsFetch("/settings/api-key", {
+      method: "POST",
+      body: JSON.stringify({ api_key: key }),
+    });
+  } catch (err) {
+    render("Could not reach the Capsule backend. Is `capsule serve` running?");
+    return;
+  }
+  input.value = ""; // never keep the key in the popup
+  render(res.ok ? "Key saved. New captures will be read." : "Not saved: " + errorDetail(res.body, res));
+  await refreshKeyStatus();
+}
+
+async function onReadPending() {
+  const res = await settingsFetch("/settings/read-pending", { method: "POST" });
+  if (!res.ok) {
+    render("Could not start: " + errorDetail(res.body, res));
+    return;
+  }
+  const poll = async () => {
+    const s = await refreshKeyStatus();
+    if (s && s.reading && s.reading.running) setTimeout(poll, 2000);
+    else if (s) render(readingSummary(s.reading));
+  };
+  poll();
+}
+
+document.getElementById("save-key").addEventListener("click", onSaveKey);
+document.getElementById("read-pending").addEventListener("click", onReadPending);
+
 // On open: prefill the token, and probe the page for embedded-media hosts so the
 // Capture click can request them gesture-first. (Opening the popup grants
 // activeTab, so the probe's executeScript is allowed.)
+// v0.2 — the extension and the Capsule app are released together and should match. Chrome can
+// update one without the other, so say which one is behind, and how to fix it, in plain words.
+// PURE (tested in node): returns null when they match or a version cannot be read.
+function versionAdvice(appVersion, extensionVersion) {
+  const parse = (v) => {
+    const m = /^(\d+)\.(\d+)\.(\d+)/.exec(String(v || ""));
+    return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+  };
+  const app = parse(appVersion);
+  const ext = parse(extensionVersion);
+  if (!app || !ext) return null;
+  const cmp = app[0] - ext[0] || app[1] - ext[1] || app[2] - ext[2];
+  if (cmp === 0) return null;
+  const a = app.join(".");
+  const e = ext.join(".");
+  if (cmp < 0) {
+    return (
+      "The Capsule app (" + a + ") is older than this extension (" + e + "). Update it by " +
+      "running the Capsule installer again; your archive is kept."
+    );
+  }
+  return (
+    "This extension (" + e + ") is older than the Capsule app (" + a + "). Update it: open " +
+    "chrome://extensions and click the reload arrow on Capsule (or load the new extension folder)."
+  );
+}
+
+async function checkVersions() {
+  try {
+    const resp = await fetch(BACKEND.replace(/\/capture$/, "/health"));
+    if (!resp.ok) return;
+    const body = await resp.json();
+    const advice = versionAdvice(body.version, chrome.runtime.getManifest().version);
+    const banner = document.getElementById("version-banner");
+    if (advice && banner) {
+      banner.textContent = advice;
+      banner.hidden = false;
+    }
+  } catch (_e) {
+    // backend not running: the capture path already says so
+  }
+}
+
 async function init() {
+  checkVersions();
   loadToken().then((token) => {
     if (token) document.getElementById("token").value = token;
+    refreshKeyStatus();
   });
 
   const indexLink = document.getElementById("index-link");

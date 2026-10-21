@@ -5,11 +5,11 @@ computer that turn the record page you are looking at into an archived, cited, h
 that you keep: the page, the record image, what the record says, and an Evidence Explained
 citation.
 
-> **Status: v0.1.0, early access.** Capsule has been used daily on real research (hundreds
+> **Status: v0.2.0, early access.** Capsule has been used daily on real research (hundreds
 > of captures from Irish parish registers, NYC vital records, Ancestry, Archion, Riksarkivet,
-> Newspapers.com and more), but installing it still takes about 15 minutes of following
-> steps in a terminal. A one-click installer and a Chrome Web Store listing are planned,
-> not built. If you are comfortable copying commands into a terminal, you can use it today.
+> Newspapers.com and more). Installing it takes one command and a few clicks in Chrome. You can
+> try it **without an AI key**; add one later to have records read. A Chrome Web Store listing
+> and a no-terminal app are on the [roadmap](ROADMAP.md).
 
 ## What it does
 
@@ -39,14 +39,15 @@ The rules it will not bend:
 
 ## Before you install: what to know
 
-- **You need your own Anthropic API key.** The extraction is done by Claude, through
-  Anthropic's API, billed to you. Get a key at
-  [console.anthropic.com](https://console.anthropic.com/) and set a monthly spending limit.
-  A typical page capture uses about 11,000 input and 1,400 output tokens with the default
-  model; see [anthropic.com/pricing](https://www.anthropic.com/pricing) for what that costs.
-  Archiving a PDF or image file makes no model call and costs nothing.
-- **What leaves your computer:** the text of the page you capture is sent to Anthropic for
-  extraction, using your key. Nothing is sent to the authors of Capsule or anyone else.
+- **No AI key is needed to try it.** Without one, Capsule archives the page, its PDF, the record
+  image and a citation, and marks the record "not read yet". With **your own Anthropic API key**
+  it also reads the record: every person, date and place, each linked to the words it came from.
+  Archived pages can be read later; nothing needs capturing again. A key is billed to you by
+  Anthropic: get one at [console.anthropic.com](https://console.anthropic.com/) and set a monthly
+  spending limit. A typical page uses about 11,000 input and 1,400 output tokens with the default
+  model; see [anthropic.com/pricing](https://www.anthropic.com/pricing).
+- **What leaves your computer:** with a key, the text of the page you capture is sent to
+  Anthropic for reading, using your key. Nothing is sent to the authors of Capsule or anyone else.
 - **Respect each site's terms.** Capsule only reads pages you can already see in your own
   browser session, but some subscription sites limit what you may save. You are responsible
   for using it within the terms of the sites you use.
@@ -61,45 +62,45 @@ FamilySearch, Archion, Riksarkivet, Newspapers.com or any other site it works wi
 
 ## Install (macOS or Windows)
 
-You need about 15 minutes, Google Chrome, and an internet connection.
+You need about 10 minutes and Google Chrome.
 
-1. **Install `uv`**, the tool that runs Capsule (it installs Python for you):
-   - macOS: open *Terminal* and run
-     `curl -LsSf https://astral.sh/uv/install.sh | sh`
-   - Windows: open *PowerShell* and run
-     `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
+1. **Install Capsule with one command.**
+   - macOS (or Linux): open *Terminal* and paste
 
-   Then close and reopen the terminal.
-2. **Download Capsule:** on this page click **Code → Download ZIP**, and unzip it somewhere
-   you will keep it (for example your Documents folder). Or, with git:
-   `git clone https://github.com/mjlawless/capsule-genealogy.git`.
-3. **In the terminal, go to that folder** (e.g. `cd ~/Documents/capsule`) and run:
+     ```
+     curl -LsSf https://raw.githubusercontent.com/mjlawless/capsule-genealogy/main/install.sh | sh
+     ```
 
-   ```
-   uv run capsule setup
-   ```
+   - Windows: open *PowerShell* and paste
 
-   The first run downloads what Capsule needs (a minute or two). It then asks for your
-   Anthropic API key, checks it with Anthropic, and saves it in your computer's own
-   password store (Keychain on macOS, Credential Manager on Windows). It finishes by showing
-   a **pairing token**.
-4. **Start Capsule** and leave the window open:
+     ```
+     powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/mjlawless/capsule-genealogy/main/install.ps1 | iex"
+     ```
 
-   ```
-   uv run capsule serve
-   ```
-
-5. **Add the extension to Chrome:** go to `chrome://extensions`, turn on **Developer mode**
-   (top right), click **Load unpacked**, and choose the `extension` folder inside the
-   Capsule folder.
-6. **Pair it:** click the Capsule icon in Chrome's toolbar (pin it from the puzzle-piece
-   menu) and paste the pairing token from step 3 into the **Token** field.
-7. **Capture something:** open a record page and click **Capture** in the Capsule popup.
-   When it finishes, open your collection at `http://127.0.0.1:8765/`.
+   It installs everything Capsule needs, starts it (and sets it to start whenever you log in),
+   and ends by showing you the folder of the Chrome extension.
+2. **Add the extension to Chrome:** go to `chrome://extensions`, turn on **Developer mode**
+   (top right), click **Load unpacked**, and choose the folder the installer showed you
+   (`~/Capsule/app/extension` on macOS, `%LOCALAPPDATA%\Capsule\app\extension` on Windows).
+3. **Pin the Capsule icon** (puzzle-piece menu) and click it once. It connects to Capsule by
+   itself.
+4. **Capture something:** open a record page and click **Capture**. Your collection is at
+   `http://127.0.0.1:8765/`.
+5. **Optional: add your Anthropic API key** in the Capsule popup (*Anthropic API key*). It is
+   checked, kept in your computer's own password store, and used from then on. Then click
+   **Read them now** to read the pages you archived before.
 
 Your archive is kept in your user data folder (`~/Library/Application Support/Capsule` on
-macOS, `%LOCALAPPDATA%\Capsule` on Windows). Set `CAPSULE_DATA_DIR` to keep it somewhere
-else. Uninstalling Capsule never deletes it.
+macOS, `%LOCALAPPDATA%\Capsule` on Windows), not in the program folder, so updating or
+reinstalling never touches it. To update, run the same install command again.
+
+<details><summary>Prefer to install by hand?</summary>
+
+Install [`uv`](https://docs.astral.sh/uv/), download this repository (**Code → Download ZIP**,
+or `git clone https://github.com/mjlawless/capsule-genealogy.git`), and in its folder run
+`uv run capsule setup`, then `uv run capsule serve`. Load the `extension` folder in Chrome as
+above.
+</details>
 
 ## Everyday use
 
@@ -109,6 +110,7 @@ uv run capsule ingest scan.pdf --url <page it came from> [--gating gated]
                                      # archive a PDF/image you already downloaded
 uv run capsule note <capture_id> "why I kept this"
 uv run capsule query --url <url>     # has this page been captured already?
+uv run capsule extract --all          # read pages archived before you added a key
 uv run capsule supersede <old_capture_id> --by <new_capture_id>
                                      # mark a capture as replaced by a better one
 uv run capsule index                 # rebuild the collection page
@@ -131,8 +133,8 @@ and `uninstall`.
 
 ## Where it's heading
 
-See the [roadmap](ROADMAP.md): next up is making Capsule easy to evaluate (no API key needed
-to try it, one-line install, no token pasting).
+See the [roadmap](ROADMAP.md): next up is reviewing and correcting what Capsule read, and a
+Chrome Web Store listing.
 
 ## For developers
 

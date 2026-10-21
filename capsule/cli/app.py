@@ -39,8 +39,7 @@ from capsule.credentials import (
     keyring_api_key,
     load_api_key,
     resolve_token,
-    store_api_key,
-    validate_api_key,
+    set_api_key,
 )
 from capsule.contracts.evidence import GatingStatus, SourceQuality
 from capsule.evals.harness import SnapshotMissing, load_fixture, run_eval
@@ -50,6 +49,7 @@ from capsule.pipeline.failure_log import failed_call_sink
 from capsule.pipeline.fetch import HttpxFetcher
 from capsule.pipeline.pipeline import CaptureOutcome, run_capture, run_document_capture
 from capsule.pipeline.sniff import MAX_ARTIFACT_BYTES, sniff
+from capsule.pipeline.reextract import extract_capture, pending_captures
 from capsule.pipeline.supersede import (
     reconcile_lifecycle,
     reinstate_capture,
@@ -75,7 +75,9 @@ def _load_dotenv() -> bool:
     already in the environment always wins, so `ANTHROPIC_API_KEY=... capsule
     serve` and tests that monkeypatch the variable behave exactly as before.
     """
-    return load_dotenv(DOTENV_FILE, override=False)
+    # interpolate=False: a value is taken literally. The installer writes folder paths here, and
+    # a real folder name can contain `${...}` that must not be expanded (Codex review).
+    return load_dotenv(DOTENV_FILE, override=False, interpolate=False)
 
 
 @app.callback()
@@ -259,6 +261,11 @@ def note(
 def setup(
     replace: bool = typer.Option(False, help="Replace an API key that is already stored."),
     validate: bool = typer.Option(True, help="Check the key with Anthropic before saving it."),
+    no_key: bool = typer.Option(
+        False,
+        "--no-key",
+        help="Do not ask for a key now (add it later in the extension). Used by the installer.",
+    ),
 ) -> None:
     """First-time setup: store your Anthropic API key and show how to connect the extension.
 
@@ -274,6 +281,11 @@ def setup(
     if (source or stored) and not replace:
         where = "the ANTHROPIC_API_KEY environment variable" if source else "your keyring"
         typer.echo(f"  Anthropic API key: already set (from {where}). Use --replace to change it.")
+    elif no_key:
+        typer.echo(
+            "  Anthropic API key: not set. Capsule works without one (pages are archived, "
+            "not read); add your key any time in the Capsule extension."
+        )
     else:
         typer.echo(
             "  Paste your Anthropic API key (from console.anthropic.com > API Keys). "
@@ -283,23 +295,12 @@ def setup(
         if not key:
             typer.secho("  No key entered; nothing saved.", fg=typer.colors.RED, err=True)
             raise typer.Exit(code=1)
+        problem = set_api_key(key, validate=validate)
+        if problem:
+            typer.secho(f"  Not saved: {problem}", fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=1)
         if validate:
-            problem = validate_api_key(key)
-            if problem:
-                typer.secho(f"  Not saved: {problem}", fg=typer.colors.RED, err=True)
-                raise typer.Exit(code=1)
             typer.echo("  Key checked with Anthropic: OK.")
-        try:
-            store_api_key(key)
-        except Exception as exc:  # noqa: BLE001 — any keyring failure gets the same advice
-            typer.secho(
-                f"  Could not save the key in your keyring ({exc}). Instead, set the "
-                "ANTHROPIC_API_KEY environment variable, or put ANTHROPIC_API_KEY=<key> in a "
-                "file named .env in the folder you run Capsule from.",
-                fg=typer.colors.RED,
-                err=True,
-            )
-            raise typer.Exit(code=1) from exc
         typer.echo("  Key saved in your keyring.")
 
     token, token_source = resolve_token()
@@ -308,9 +309,63 @@ def setup(
     typer.echo("  1. Start Capsule:            capsule serve   (leave it running)")
     typer.echo("  2. In Chrome, open chrome://extensions, turn on Developer mode, click")
     typer.echo("     'Load unpacked' and choose the 'extension' folder of this download.")
-    typer.echo("  3. Click the Capsule icon and paste this pairing token into the Token field:")
+    typer.echo("  3. Click the Capsule icon. It pairs with Capsule by itself; if it ever asks")
+    typer.echo("     for a token, paste this one:")
     typer.secho(f"       {token}", fg=typer.colors.CYAN, bold=True)
     typer.echo(f"     ({token_source})")
+
+
+@app.command()
+def extract(
+    capture_id: Optional[str] = typer.Argument(
+        None, help="A capture archived without an API key (extraction pending)."
+    ),
+    all_pending: bool = typer.Option(
+        False, "--all", help="Read every capture whose extraction is still pending."
+    ),
+    db: Path = typer.Option(default_factory=default_db_path, help="SQLite evidence index path."),
+    captures: Path = typer.Option(
+        default_factory=default_captures_root, help="Capture-folder collection dir."
+    ),
+) -> None:
+    """Read captures that were archived before you added an Anthropic API key.
+
+    Each pending capture's ARCHIVED page (not the live site) is read into a new capture that
+    replaces it; the old one is kept and marked superseded. The citation keeps the date you
+    originally viewed the page.
+    """
+    if bool(capture_id) == all_pending:
+        typer.secho("give a capture id, or --all", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2)
+    targets = [capture_id] if capture_id else pending_captures(captures)
+    if not targets:
+        typer.echo("nothing is waiting to be read")
+        return
+    agent = _build_agent(captures)
+    repository = Repository(db)
+    failed = 0
+    try:
+        for target in targets:
+            try:
+                done = extract_capture(
+                    repository=repository, captures_root=captures, capture_id=target, agent=agent
+                )
+            except (FileNotFoundError, ValueError, sqlite3.Error) as exc:
+                failed += 1
+                typer.secho(f"{target}: {exc}", fg=typer.colors.RED, err=True)
+                continue
+            out = done.outcome
+            if out is None:
+                typer.echo(f"{target} -> {done.replacement.name}: finished an interrupted run")
+                continue
+            typer.echo(
+                f"{target} -> {out.capture_folder.name}: {len(out.extraction.assertions)} "
+                f"assertion(s), verify {'OK' if out.verify.ok else 'FAILED'}"
+            )
+    finally:
+        repository.close()
+    if failed:
+        raise typer.Exit(code=1)
 
 
 @app.command()

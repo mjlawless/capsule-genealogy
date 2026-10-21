@@ -68,9 +68,12 @@
   </head>
   <body>
     <h1>Capsule</h1>
+    <!-- v0.2: shown only when the extension and the Capsule app are different versions. -->
+    <div id="version-banner" class="row note" hidden
+      style="background:#fff8c5;border:1px solid #d4a72c;border-radius:6px;padding:6px 8px;"></div>
     <div class="row">
       <label for="token">Token:</label>
-      <input id="token" type="password" placeholder="paste from `capsule serve`" />
+      <input id="token" type="password" placeholder="pairs automatically" />
     </div>
     <div class="row">
       <label for="gating">Access:</label>
@@ -96,6 +99,23 @@
            evidence extracted from the source. Optional. -->
       <textarea id="note" rows="2" placeholder="why you're keeping this (optional)"></textarea>
     </div>
+    <!-- v0.2: the user's OWN Anthropic key, entered here instead of in a terminal. It goes
+         only to the local backend (which checks it with Anthropic and keeps it in the OS
+         keyring); it is never stored by the extension. Without a key, captures are archived
+         and read later. -->
+    <details id="key-settings">
+      <summary>Anthropic API key: <span id="key-status">checking…</span></summary>
+      <div class="row">
+        <input id="api-key" type="password" autocomplete="off" placeholder="sk-ant-…" />
+        <button id="save-key">Save key</button>
+      </div>
+      <div class="row note">Your own key from console.anthropic.com, billed to you. It stays
+        on this computer.</div>
+      <div class="row" id="pending-row" hidden>
+        <span id="pending-text"></span>
+        <button id="read-pending">Read them now</button>
+      </div>
+    </details>
     <pre id="result">Loads the page you are viewing and sends it to your local Capsule backend (run `capsule serve`).</pre>
     <div class="row footer">
       <a id="index-link" href="http://127.0.0.1:8765/" target="_blank" rel="noopener noreferrer"

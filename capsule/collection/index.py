@@ -160,10 +160,16 @@ def _row(record: CaptureRecord, interactive: bool) -> str:
             '<span class="chip superseded" title="superseded — the replacement is not in '
             'this collection">superseded</span>'
         )
+    pending = (
+        '<span class="chip pending" title="archived without an API key; not read yet">'
+        "extraction pending</span>"
+        if record.extraction_pending
+        else ""
+    )
     return (
         '<tr class="row">'
         f'<td><span class="pill s-{esc(record.status)}">{esc(record.status)}</span>'
-        f"{superseded}</td>"
+        f"{superseded}{pending}</td>"
         f'<td><a class="rowlink" href="#cap-{esc(record.folder_name)}">'
         f'{esc(record.record_type or "unclassified")}</a></td>'
         f"<td>{esc(record.primary_persona or _PENDING)}</td>"

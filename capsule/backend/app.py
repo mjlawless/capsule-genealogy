@@ -41,7 +41,13 @@ from capsule.contracts.evidence import GatingStatus
 from capsule.evals.fixtures import write_fixture
 from capsule.pipeline.annotate import add_note_to_capture
 from capsule.pipeline.correct import CorrectionRequest, apply_correction
-from capsule.config import default_captures_root, default_db_path, work_queue_enabled
+from capsule.config import (
+    default_captures_root,
+    default_db_path,
+    pairable_extension_ids,
+    work_queue_enabled,
+)
+from capsule.credentials import api_key_source, set_api_key
 from capsule.pipeline.ancestry import (
     has_record_image,
     identity_mismatch,
@@ -60,6 +66,11 @@ from capsule.pipeline.fetch import ProvidedContentFetcher
 from capsule.pipeline.pipeline import CaptureOutcome, run_capture, run_document_capture
 from capsule.pipeline.sniff import MAX_ARTIFACT_BYTES, sniff
 from capsule.pipeline.page_identity import accepted_page_label
+from capsule.pipeline.reextract import (
+    background_status,
+    pending_captures,
+    start_background_reading,
+)
 from capsule.pipeline.render_check import (
     EVIDENCE_IMAGE_STATUSES,
     RECORD_IMAGE_PROVENANCE,
@@ -493,6 +504,9 @@ class CaptureResponse(BaseModel):
     # reaches this response — it is refused with a 409 carrying `dedup: "blocked"`.
     dedup: str = "new"
     duplicate_of: Optional[str] = None
+    # v0.2 — archived without an API key: the record has not been read yet (not "read and
+    # found nothing"). Additive, so an older extension simply ignores it.
+    extraction_pending: bool = False
 
 
 class NoteRequest(BaseModel):
@@ -834,6 +848,29 @@ def review_transcript(
     return HTMLResponse(
         render_review(folder.name, doc), headers={"X-Content-Type-Options": "nosniff"}
     )
+
+
+# Before the catch-all file route below, which would otherwise swallow this path.
+@app.get("/settings/status")
+def settings_status(
+    _auth: None = Depends(require_token),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    """What the popup needs to guide a new user: is there a key, and what is waiting to be read."""
+    reading = background_status()
+    return {
+        "version": build_version(),
+        "api_key": "set" if os.environ.get("ANTHROPIC_API_KEY") else "missing",
+        "api_key_source": api_key_source(),
+        "pending": len(pending_captures(settings.captures_root)),
+        "reading": {
+            "running": reading.running,
+            "total": reading.total,
+            "done": reading.done,
+            "failed": reading.failed,
+            "last_error": reading.last_error,
+        },
+    }
 
 
 @app.get("/{capture_id}/{file_path:path}", response_model=None)
@@ -1381,12 +1418,9 @@ def _capture_locked(
         )
     else:
         assert req.html is not None  # guaranteed by the request validator
-        if agent is None:
-            raise HTTPException(
-                status_code=503,
-                detail="No Anthropic API key (ANTHROPIC_API_KEY) on the server: run `capsule setup`, then "
-                "restart `capsule serve`",
-            )
+        # v0.2 — no API key yet is no longer a refusal. The page, media and citation are
+        # archived now (`run_capture(agent=None)`), the extraction is marked pending, and the
+        # response says so. An evaluator can see Capsule work before entering any key.
         media = _decode_media(req.media)
         media_count = len(media)
         # The bytes disagreed with what the browser called them (BUG-008). Corrected on the
@@ -1550,6 +1584,68 @@ def ancestry_seed(
         ledger.close()
 
 
+@app.post("/pair")
+def pair(request: Request, settings: Settings = Depends(get_settings)) -> dict:
+    """Hand the pairing token to Capsule's OWN extension, so nobody has to paste it (v0.2).
+
+    Decided by the request's `Origin`, which the browser sets and no page or other extension
+    can forge: only `chrome-extension://<one of pairable_extension_ids()>` gets the token. A
+    web page (including one that DNS-rebinds to 127.0.0.1) arrives with its own origin and is
+    refused, so a page still cannot drive captures (SECURITY.md). Software already running on
+    this computer could read the token file anyway; it is not the threat this guards.
+    """
+    origin = request.headers.get("origin", "")
+    prefix = "chrome-extension://"
+    ext_id = origin[len(prefix):] if origin.startswith(prefix) else ""
+    if ext_id not in pairable_extension_ids():
+        raise HTTPException(
+            status_code=403,
+            detail="Only the Capsule extension can pair automatically; paste the token instead.",
+        )
+    if not settings.token:
+        raise HTTPException(status_code=503, detail="The backend has no token configured.")
+    _logger.info("paired with the Capsule extension (%s)", ext_id)
+    return {"token": settings.token}
+
+
+class ApiKeyRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    api_key: str = Field(..., min_length=1, max_length=500)
+
+
+@app.post("/settings/api-key")
+def settings_api_key(
+    req: ApiKeyRequest,
+    _auth: None = Depends(require_token),
+) -> dict:
+    """Store the user's own Anthropic key, entered in the extension popup (v0.2).
+
+    Checked with Anthropic first (no tokens spent), saved in the OS keyring, and used from the
+    next capture on, with no restart. Token-gated like /capture: only the paired extension can
+    reach it. The key is never echoed back, logged, or written anywhere but the keyring.
+    """
+    problem = set_api_key(req.api_key)
+    if problem:
+        raise HTTPException(status_code=400, detail=problem)
+    return {"ok": True, "api_key": "set", "source": api_key_source()}
+
+
+@app.post("/settings/read-pending")
+def settings_read_pending(
+    _auth: None = Depends(require_token),
+    settings: Settings = Depends(get_settings),
+    agent: Optional[Agent] = Depends(provide_agent),
+) -> dict:
+    """Read every capture archived before the key was added, in the background."""
+    if agent is None:
+        raise HTTPException(status_code=400, detail="Add your Anthropic API key first.")
+    state = start_background_reading(
+        db_path=settings.db_path, captures_root=settings.captures_root, agent=agent
+    )
+    return {"running": state.running, "total": state.total}
+
+
 @app.post("/note", response_model=NoteResponse)
 def add_note(
     req: NoteRequest,
@@ -1647,6 +1743,7 @@ def _to_response(
         follow_up=follow_up,
         dedup=dedup,
         duplicate_of=duplicate_of,
+        extraction_pending=outcome.agent_call is None and outcome.source.archive.kind.value != "document",
         capture_folder=str(outcome.capture_folder),
         verify_ok=outcome.verify.ok,
         url=outcome.source.url,

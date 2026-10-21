@@ -166,8 +166,9 @@ def test_BUG_021_every_extension_capture_post_names_its_build():
     header = '"X-Capsule-Extension-Version": chrome.runtime.getManifest().version'
     background = (_EXT / "background.js").read_text(encoding="utf-8")
     popup = (_EXT / "popup.js").read_text(encoding="utf-8")
-    assert background.count("fetch(BACKEND") == background.count(header) == 1
-    assert popup.count("fetch(BACKEND") == popup.count(header) == 2
+    # `fetch(BACKEND, {` is a POST to /capture; `/pair` (v0.2) is a different request.
+    assert background.count("fetch(BACKEND, {") == background.count(header) == 1
+    assert popup.count("fetch(BACKEND, {") == popup.count(header) == 2
 
 
 def test_BUG_021_the_build_identity_is_frozen_once_computed(tmp_path, monkeypatch):

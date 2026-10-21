@@ -283,6 +283,15 @@ def _assess(folder: Path, manifest: dict, *, ancestry: bool) -> ExistingCapture:
     owns it (§3.3: an `original` that yielded no text must hold a real raster). So `none`
     falls through to verification and lets that gate decide.
     """
+    if manifest.get("extraction") == "pending":
+        # v0.2 — archived without a key, never read. Not complete, so re-capturing the page
+        # once a key exists is allowed (or `capsule extract` reads this one).
+        return ExistingCapture(
+            capture_id=folder.name,
+            complete=False,
+            image_status=manifest.get("image"),
+            reason="extraction pending (archived without an API key)",
+        )
     image = manifest.get("image")
     if image == "none" and not ancestry:
         pass  # not a verdict — see above; verify_capture decides whether it matters

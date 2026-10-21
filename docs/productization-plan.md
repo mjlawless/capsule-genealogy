@@ -8,6 +8,41 @@ audience question is resolved: **non-technical genealogists, double-click instal
 
 ---
 
+## ⭐ Current track: v0.2 "easy to evaluate" (owner direction, 2026-10-21)
+
+**Supersedes the phase order below for now.** v0.1.0 shipped publicly the same day (install
+from source). The owner's direction for the next step: *"the install should be super smooth"*;
+**users bring and enter their own Anthropic key** (the owner's key is never used, and a
+subscription or pay-per-use model may come later); make Capsule as easy as possible for
+third-party evaluation.
+
+**Gate (measurable):** a stranger on a clean Mac or Windows machine goes from the repository
+link to a first capture in **≤ 10 minutes**, and **seeing it work does not require an API key.**
+
+Build order, by friction removed per unit of effort (decided 2026-10-21 under the owner's
+deference; reversible):
+
+1. **Capture without a key:** archive the page, PDF, image and citation, with extraction
+   *pending* (not failed). Run it later by re-extracting from the stored snapshot into a new
+   capture that supersedes the archive-only one (REQ-011), keeping the original access date.
+2. **Enter the key in the extension:** the paired popup sends the key to the local backend,
+   which validates it with Anthropic and stores it in the OS keyring. No terminal. Key
+   handling sits behind one credential interface, so a future hosted or subscription
+   credential can plug in without touching capture code.
+3. **Pairing without pasting a token,** with a one-time human confirmation; a web page still
+   cannot drive captures (SECURITY.md).
+4. **A one-line installer** per OS (installs `uv`, fetches the release, runs setup, starts at
+   login), plus a CI job that runs it on fresh Linux, macOS and Windows runners and checks
+   `/health`.
+5. **A version check** in the popup with a plain-language mismatch message.
+6. **Optional demo collection** from synthetic or public-domain pages.
+
+Deferred until the owner decides: **Chrome Web Store** (needs the owner's developer account and
+$5; `debugger` and the Ancestry auto-click are review risks). Phases 2-4 below (packaged app,
+signed installers, store, auto-update) follow v0.2.
+
+---
+
 ## 1. Goal and definition of done
 
 A genealogist with no terminal skills can go from a download link to their first

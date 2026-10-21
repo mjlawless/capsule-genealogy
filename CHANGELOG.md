@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.0 — easy to evaluate
+
+- **One-line install** for macOS/Linux and Windows. It installs everything, starts Capsule at
+  login, and upgrades safely: the previous version is put back automatically if anything fails,
+  and your archive is never touched. Tested from scratch on fresh machines in CI.
+- **Try it without an AI key.** Pages are archived (page, PDF, record image, citation) and
+  marked "not read yet"; a short, dismissable prompt explains what a key adds.
+- **Enter your own Anthropic key in the extension**, no terminal; it is checked and kept in your
+  computer's password store. **Read them now** reads everything archived before the key.
+  `capsule extract` does the same from the command line, from the archived page.
+- **No more token pasting:** the extension pairs with Capsule by itself, and re-pairs after a
+  reinstall. Web pages still cannot drive captures.
+- **Version check:** the popup says in plain words when the extension or the app needs updating.
+
 ## 0.1.0 — first public release (early access)
 
 Capsule had been in daily private use before this release. Highlights of what ships:

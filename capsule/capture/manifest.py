@@ -72,6 +72,7 @@ from capsule.pipeline.render_check import (
     looks_blank,
 )
 from capsule.pipeline.sufficiency import (
+    is_tile_viewer_source,
     longest_raster_edge,
     record_media_shortfall,
     yielded_no_text_evidence,
@@ -572,6 +573,8 @@ def write_capture(
     household: Sequence[HouseholdMember] = (),
     media_warnings: Sequence[str] = (),
     extension_version: str | None = None,
+    extraction_pending: bool = False,
+    extracted_from: str | None = None,
 ) -> Path:
     """Write a capture folder under `dest_root/` and return its path.
 
@@ -807,6 +810,25 @@ def write_capture(
             manifest = {
                 **{k: v for k, v in manifest.items() if k != "hashes"},
                 "household": [_household_payload(m) for m in household],
+                "hashes": manifest["hashes"],
+            }
+        if extracted_from:
+            # v0.2 — this capture is the READING of a capture archived without a key. Recorded
+            # in the replacement itself, so an interrupted `capsule extract` finds it on retry
+            # and finishes the supersession instead of paying for a second reading.
+            manifest = {
+                **{k: v for k, v in manifest.items() if k != "hashes"},
+                "extracted_from": extracted_from,
+                "hashes": manifest["hashes"],
+            }
+        if extraction_pending:
+            # v0.2 — archived with no model call (no API key yet). The empty extraction is
+            # NOT a reading that found nothing, and must never be mistaken for one: verify
+            # skips the no-text floor for it, and dedup does not let it block a re-capture.
+            # Additive and omitted otherwise, so every other manifest is unchanged.
+            manifest = {
+                **{k: v for k, v in manifest.items() if k != "hashes"},
+                "extraction": "pending",
                 "hashes": manifest["hashes"],
             }
         if extension_version:
@@ -1167,12 +1189,27 @@ def verify_capture(capture_folder: str | Path) -> VerifyResult:
 
     # Integrity is settled above. Now the question hashing cannot reach: does this capture
     # hold its record at all? Scoped to the image-only-original class — see `sufficiency`.
-    insufficient = _record_media_shortfall(root, manifest)
+    # v0.2: an archive-only capture has not been READ yet, so "this capture read no record
+    # text" would be false. The floor waits for the reading; the warning says it is owed.
+    # EXCEPT on a tile viewer, where the image IS the record whatever the text says: reading
+    # the snapshot later cannot recover pixels that were never archived (Codex review).
+    pending = manifest.get("extraction") == "pending"
+    source_url = (manifest.get("source") or {}).get("url")
+    if pending and not is_tile_viewer_source(source_url):
+        insufficient: tuple[str, ...] = ()
+    else:
+        insufficient = _record_media_shortfall(root, manifest)
 
     # BUG-016 — and the question that is neither integrity nor sufficiency: is anything
     # WRONG with the media we do hold? Re-measured from the bytes, so a capture banked
     # before this existed still answers it. Pointedly absent from `ok` below.
     warnings = _render_warnings(root, manifest)
+    if pending:
+        warnings += (
+            "extraction pending: this capture was archived without an Anthropic API key, so "
+            "the record has not been read yet. Add a key, then run "
+            f"`capsule extract {root.name}`.",
+        )
 
     ok = not missing and not mismatched and not extra and not insufficient
     return VerifyResult(

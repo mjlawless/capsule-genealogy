@@ -136,6 +136,8 @@ class CaptureRecord:
     #: apart from `superseded_by`: the state holds even when the replacement's folder is not
     #: in the collection (trashed, not yet copied), and must not silently read as current.
     superseded: bool = False
+    #: v0.2 — archived without an API key; the record has not been read yet.
+    extraction_pending: bool = False
     #: The replacement's folder name, when it is known; None if this one is current or the
     #: replacement's folder is unavailable.
     superseded_by: str | None = None
@@ -366,6 +368,7 @@ def read_capture_record(folder: Path) -> CaptureRecord:
         is_document=is_document,
         superseded=superseded,
         superseded_by=superseded_by,
+        extraction_pending=manifest.get("extraction") == "pending",
     )
 
 

@@ -4,22 +4,16 @@ Where Capsule is heading, in rough order. Nothing here has a promised date. Item
 money (store fees, code signing) are marked **needs budget** and happen only when that is
 decided. Suggestions are welcome in [Discussions](../../discussions).
 
-## Now: easy to evaluate (v0.2)
+## Done in v0.2: easy to evaluate
 
-The goal: someone on a clean Mac or Windows computer goes from this page to their first capture
-in **10 minutes or less**, and can see it work **without an Anthropic API key**.
+One-line install, capture without an API key (read later), your own key entered in the
+extension, automatic pairing, a version check, and the installer tested from scratch in CI.
+Still to come from this list: an optional **demo collection** of sample captures.
 
-- **Capture without an API key.** Archive the page, PDF, record image and citation straight
-  away. The AI extraction is marked *pending* and can be run later, once a key is added.
-- **One-line install** for macOS and Windows: one command installs everything and runs setup.
-- **Pairing without copy-paste.** The extension finds the local backend and pairs after a
-  one-time confirmation, instead of a pasted token.
-- **Version check.** The extension and the backend tell you in plain language when one of
-  them needs updating.
-- **Install tested in CI.** Every release is installed from scratch on fresh Linux, macOS and
-  Windows machines before it ships.
-- **Demo collection.** Optional sample captures from public-domain records, so you can explore
-  the collection page before installing the extension.
+## Now: Chrome Web Store
+
+A listing so installing the extension is one click instead of Developer mode (unlisted first,
+for evaluators).
 
 ## Next: evidence you can work with
 

@@ -214,3 +214,21 @@ raise a grade (REQ-006 §5.1–5.2, owner ruling R1). It follows the notes rule:
   a person runs `capsule supersede <id> --resync` ("this database is current"). This covers
   both a restored older database and the rare crash between the file write and the COMMIT,
   which Capsule cannot tell apart.
+
+## 7. `manifest.json` → `extraction: "pending"` and `extracted_from` (v0.2, added 2026-10-21, backward-compatible)
+
+```jsonc
+{ "extraction": "pending" }                                    // archived without an API key
+{ "extracted_from": "20261021-exampleorg-1a2b3c4d" }           // this capture READS that one
+```
+
+- **`extraction: "pending"`** marks a capture archived with no Anthropic API key: snapshot,
+  media and citation are real, and the empty `extraction.json` means *not read yet*, never
+  *read and found nothing*. `verify` does not apply the no-text floor to it (the record has not
+  been read), **except on a tile viewer**, where the image is the record and must be archived
+  regardless. Dedup never lets a pending capture block a re-capture. Omitted otherwise.
+- **`extracted_from`** is written by `capsule extract` on the new capture that reads a pending
+  one from its archived snapshot. The new capture keeps the original's access date, media,
+  gating and redaction record, and the pending capture is marked superseded by it (REQ-011).
+  The field lets an interrupted `capsule extract` resume without reading twice.
+- Both are additive and do not change `spec_version`.

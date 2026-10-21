@@ -90,6 +90,40 @@ def validate_api_key(key: str) -> Optional[str]:
     return None
 
 
+def set_api_key(key: str, *, validate: bool = True) -> Optional[str]:
+    """Check, store and start using a key; None on success, else a plain-language reason.
+
+    The ONE way a key enters Capsule, whether typed into `capsule setup` or the extension's
+    popup (v0.2). It is used immediately, with no restart: the model client reads the
+    environment. This is also the seam for any future credential (a hosted or subscription
+    key): callers ask for "a key that works" and never know where it came from.
+    """
+    key = key.strip()
+    if not key:
+        return "no key was entered"
+    if validate:
+        problem = validate_api_key(key)
+        if problem:
+            return problem
+    try:
+        store_api_key(key)
+    except Exception as exc:  # noqa: BLE001 — any keyring failure gets the same advice
+        return (
+            f"the key works, but it could not be saved in this computer's keyring ({exc}). "
+            "Set the ANTHROPIC_API_KEY environment variable instead, or put "
+            "ANTHROPIC_API_KEY=<key> in a .env file in the folder you run Capsule from."
+        )
+    os.environ[API_KEY_ENV] = key
+    return None
+
+
+def api_key_source() -> Optional[str]:
+    """Where the key in use came from ("environment" or "keyring"), or None if there is none."""
+    if not os.environ.get(API_KEY_ENV):
+        return None
+    return "keyring" if keyring_api_key() == os.environ[API_KEY_ENV] else "environment"
+
+
 def resolve_token(path: Optional[Path] = None) -> tuple[str, str]:
     """`(token, where it came from)`; mints and saves one if there is none yet."""
     path = path or token_path()

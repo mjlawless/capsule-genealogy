@@ -129,6 +129,11 @@ and `uninstall`.
   running. Please do not paste record content from subscription sites.
 - Questions and ideas: **[Discussions](../../discussions)**.
 
+## Where it's heading
+
+See the [roadmap](ROADMAP.md): next up is making Capsule easy to evaluate (no API key needed
+to try it, one-line install, no token pasting).
+
 ## For developers
 
 ```bash

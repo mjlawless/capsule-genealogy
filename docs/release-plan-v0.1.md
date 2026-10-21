@@ -1,6 +1,6 @@
 # Release plan — v0.1.0, the first public open-source release
 
-**Status:** 🟡 **IN PROGRESS** — written 2026-10-21. The owner handed over direction the same day
+**Status:** ✅ **RELEASED 2026-10-21** — https://github.com/mjlawless/capsule-genealogy (public, tag `v0.1.0`). Written the same day. The owner handed over direction the same day
 ("take control, move the project forward, I defer to your recommendations") with the goal of an
 end-user-installable open-source project on GitHub, shareable on LinkedIn and genealogy forums.
 
@@ -67,9 +67,26 @@ public, spending money, and the final public name.
   templates, cross-platform CI, a privacy scrub of the shipped files (behaviour-neutral:
   identical Python ASTs apart from docstrings), and `release/export-public.sh`. The exported
   tree installs from scratch and passes 995 tests (5 corpus-dependent skips).
-- **Wave 4 — waiting on the owner:** visibility, name, the Ancestry work-queue question, then
-  create the public repo with one fresh commit (GitHub noreply author), tag v0.1.0 and attach
-  an extension zip to the release.
+- **Wave 4 — done.** Owner rulings: publish public now; repo `capsule-genealogy`; the Ancestry
+  work queue ships OFF (`CAPSULE_ENABLE_WORK_QUEUE=1` enables it; set in the owner's local
+  `.env`); the 1903/1905 NYC eval fixtures stay; license holder "the Capsule authors". Public
+  repo created with one fresh commit (GitHub noreply author), tag `v0.1.0`, release with
+  `capsule-extension-0.1.0.zip`, Discussions and private vulnerability reporting on. First CI:
+  Linux, macOS and Windows all green (Windows 999 passed, 4 corpus skips).
+
+## Releasing again
+
+The private repo stays the development repo. For the next release:
+
+1. Bump the product version in `pyproject.toml` and `extension/manifest.json` together (a test
+   enforces they match), add a `CHANGELOG.md` entry, commit, Codex-review.
+2. `git clone https://github.com/mjlawless/capsule-genealogy.git <dir>`, then replace its
+   tracked contents with a fresh `release/export-public.sh <empty dir>` tree (copy over, keep
+   `.git`), so the public history grows one commit per release rather than restarting.
+3. Commit as the GitHub noreply address, tag `vX.Y.Z`, push, `gh release create` with the
+   extension zip.
+4. Follow-up owed: make the Windows CI job blocking (drop `continue-on-error`), since it passed.
+
 
 ## Owner-only live checks, collected
 

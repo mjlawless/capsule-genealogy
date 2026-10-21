@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Secrets / env
+.env
+.env.*
+*.key
+
+# Capsule captures — NEVER commit raw captured pages/media (gated/copyright/PII, plan §11).
+# Commit hash manifests + hand-labeled expected-output JSON only.
+captures/
+data/
+# Evidence index DBs (CLI default writes ./capsule.db in cwd; may hold captured PII).
+*.db
+evals/fixtures/**/snapshot.html
+evals/fixtures/**/media/
+*.mhtml
+
+# Editor / OS
+.obsidian/
+.DS_Store
+Thumbs.db
+
+# Claude local (project memory + PRDs ARE committed; local settings are not)
+.claude/settings.local.json

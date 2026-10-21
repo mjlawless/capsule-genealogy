@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        font: 13px/1.4 system-ui, sans-serif;
+        width: 360px;
+        margin: 0;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 15px;
+        margin: 0 0 8px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      button {
+        padding: 6px 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:disabled {
+        cursor: default;
+        opacity: 0.6;
+      }
+      pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: #f4f4f5;
+        padding: 8px;
+        border-radius: 4px;
+        max-height: 320px;
+        overflow: auto;
+        margin: 8px 0 0;
+      }
+      input#token {
+        flex: 1;
+        font: inherit;
+        padding: 4px 6px;
+      }
+      textarea#note {
+        flex: 1;
+        font: inherit;
+        padding: 4px 6px;
+        resize: vertical;
+        min-height: 2.2em;
+      }
+      .row.note {
+        align-items: flex-start;
+      }
+      label {
+        white-space: nowrap;
+      }
+      .footer {
+        margin-bottom: 0;
+        border-top: 1px solid #e4e4e7;
+        padding-top: 8px;
+      }
+      .footer a {
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Capsule</h1>
+    <div class="row">
+      <label for="token">Token:</label>
+      <input id="token" type="password" placeholder="paste from `capsule serve`" />
+    </div>
+    <div class="row">
+      <label for="gating">Access:</label>
+      <!-- Auto-detect is the default on purpose. A pre-selected "Public" is a
+           pre-checked claim that a copyrighted record may be republished; the
+           backend infers gating from the page (a logout link means you were
+           logged in) unless the user overrides here. -->
+      <select id="gating">
+        <option value="" selected>Auto-detect</option>
+        <option value="public">Public</option>
+        <option value="gated">Gated (login/paywall)</option>
+      </select>
+      <button id="capture">Capture this page</button>
+    </div>
+    <div class="row">
+      <input id="grab-media" type="checkbox" checked />
+      <label for="grab-media">Also archive embedded scans / PDFs on this page</label>
+    </div>
+    <div class="row note">
+      <label for="note">Note:</label>
+      <!-- The researcher's own words — why this was kept, what to revisit. Stored
+           append-only and excluded from the capture's hashes; never treated as
+           evidence extracted from the source. Optional. -->
+      <textarea id="note" rows="2" placeholder="why you're keeping this (optional)"></textarea>
+    </div>
+    <pre id="result">Loads the page you are viewing and sends it to your local Capsule backend (run `capsule serve`).</pre>
+    <div class="row footer">
+      <a id="index-link" href="http://127.0.0.1:8765/" target="_blank" rel="noopener noreferrer"
+        >Open Capsule index ↗</a
+      >
+    </div>
+    <!-- Defines renderPagePdf() for popup.js; must load first. -->
+    <script src="render-pdf.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

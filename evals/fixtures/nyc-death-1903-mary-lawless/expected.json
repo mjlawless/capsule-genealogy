@@ -1,0 +1,58 @@
+{
+  "record_type": "death",
+  "personas": [
+    { "label": "Mary Lawless", "role": "deceased" }
+  ],
+  "assertions": [
+    {
+      "persona": "Mary Lawless",
+      "field": "name",
+      "value": "Mary Lawless",
+      "evidence_type": "stated",
+      "snippet": "Name: Mary Lawless"
+    },
+    {
+      "persona": "Mary Lawless",
+      "field": "soundex",
+      "value": "L420",
+      "evidence_type": "stated",
+      "snippet": "Soundex: L420"
+    },
+    {
+      "persona": "Mary Lawless",
+      "field": "age",
+      "value": "46 y",
+      "evidence_type": "stated",
+      "snippet": "Age: 46 y"
+    },
+    {
+      "persona": "Mary Lawless",
+      "field": "type",
+      "value": "Death Certificate",
+      "evidence_type": "stated",
+      "snippet": "Type: Death Certificate"
+    },
+    {
+      "persona": "Mary Lawless",
+      "field": "borough",
+      "value": "Queens",
+      "evidence_type": "stated",
+      "snippet": "Borough: Queens"
+    },
+    {
+      "persona": "Mary Lawless",
+      "field": "date",
+      "value": "1903-01-19",
+      "evidence_type": "stated",
+      "snippet": "Date: 1903-01-19",
+      "normalized_value": "1903-01-19"
+    },
+    {
+      "persona": "Mary Lawless",
+      "field": "certificate",
+      "value": "148",
+      "evidence_type": "stated",
+      "snippet": "Certificate: 148"
+    }
+  ]
+}

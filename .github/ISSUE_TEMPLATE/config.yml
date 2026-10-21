@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions and ideas
+    url: ../../discussions
+    about: Ask how to do something, or suggest a site Capsule should support.

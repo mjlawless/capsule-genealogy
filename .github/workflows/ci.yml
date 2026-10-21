@@ -1,0 +1,30 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    # Windows is new to CI with v0.1.0; report it, but do not block on it yet.
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      # The extension's logic is tested by running it in node. Without node those tests
+      # SKIP, and a green run would hide that they never ran, so node is installed here
+      # and any node skip fails the build.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Sync
+        run: uv sync
+      - name: Lint
+        run: uv run ruff check capsule tests
+      - name: Test
+        shell: bash
+        run: |
+          uv run pytest -q -rs | tee pytest.out
+          ! grep -q "node is not installed" pytest.out

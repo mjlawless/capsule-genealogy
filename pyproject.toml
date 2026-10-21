@@ -1,0 +1,48 @@
+[project]
+name = "capsule"
+version = "0.1.0"
+description = "Evidence-grade genealogy capture — turn a web page into an archived, cited, tree-ready source."
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2",
+    "httpx>=0.27",
+    "anthropic>=0.40",
+    "typer>=0.12",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    # Rasterizes a rendered PDF so we can check it is not BLANK (BUG-001). Text
+    # extraction cannot catch that failure: a blanked render keeps a perfect text
+    # layer beneath an opaque fill. Apache-2.0, self-contained wheels, no system deps.
+    "pypdfium2>=4",
+    # DECODES a downloaded record image so we can check its real pixel dimensions
+    # (REQ-001 R1.4). A 96x95 thumbnail must be a hard FAIL, not a silent success — and
+    # only decoding can tell you that. Same lesson as BUG-001: "media written" is not
+    # "media usable". Hand-rolling JPEG/PNG/TIFF parsers to dodge the best-tested
+    # imaging library in Python would be the wrong trade.
+    "pillow>=10",
+    # Loads ./.env at CLI start so ANTHROPIC_API_KEY need not be re-exported in
+    # every terminal. Never overrides a value already in the environment.
+    "python-dotenv>=1.0",
+    "platformdirs>=4",
+    "keyring>=25",
+]
+
+[project.scripts]
+capsule = "capsule.cli.app:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+    "mypy>=1.11",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

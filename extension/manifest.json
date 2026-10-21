@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "Capsule \u2014 page-in-view capture",
+  "version": "0.1.0",
+  "description": "Capture the genealogy page you are viewing into your local Capsule backend.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "debugger",
+    "downloads"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:8765/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Capture this page with Capsule"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "media-detect.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

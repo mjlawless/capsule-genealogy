@@ -1,0 +1,6 @@
+{
+  "url": "https://a860-historicalvitalrecords.nyc.gov/view/4017734",
+  "gating": "public",
+  "record_type": "death",
+  "notes": "First real browser capture (2026-07-08). NYC Municipal Archives historical vital record; the page is an HTML index panel (Name/Soundex/Age/Type/Borough/Date/Certificate) wrapping an <embed> PDF of the scanned certificate. This gold pins the 7 index-panel fields; the scan's own contents (cause of death, parents, informant) are only in the PDF and need M4 vision. snapshot.html stays local (gitignored)."
+}

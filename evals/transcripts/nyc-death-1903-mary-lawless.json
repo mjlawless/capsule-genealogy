@@ -1,0 +1,203 @@
+{
+  "name": "nyc-death-1903-mary-lawless",
+  "capture_id": "20260719-a860historicalvitalrecordsnycgov-603f8316",
+  "notes": [
+    "Certificate Q-1903-0148 (Mary Lawless, Queens 1903). Gold = REQ-006 §7, hand-read by the Genealogy workspace from a 400 dpi render.",
+    "Owner-confirmed corrections 2026-09-24: Undertaker 'Geo. R. McVeigh' -> 'Geo. P. McHugh' (the ink reads M, raised c, H-u-g-h); Physician 'Geo. Hatfield' -> 'F[?]. Hatfield' (the ink opens with an F and a small raised letter).",
+    "Owner ruling 2026-09-24 ('go with the ink'): Date of Burial §7 'Jan 21st 1903' -> 'Jany 21st 1903' (the crop shows a 'y'; a raised 'st' may be rendered with or without a space); both residence durations §7 '35 years' -> '35 Years' (tall looped capital Y).",
+    "Adapted for scoring, not corrected: §7 values that include PRINTED form words keep only the handwriting (the transcriber reads entries, not the form). Time of death '§7: about 9:15 o'clock A.M.' -> '9:15', accept '9.15'.",
+    "Multi-cell §7 dates (date of death '19 / Jan / 1903', last saw alive) are split across several blanks on the form and are not scored here.",
+    "Hard fields (a confident miss fails the gate, §8.1): the parents' names."
+  ],
+  "fields": [
+    {
+      "label": "Father's Name",
+      "match": [
+        "^fathers?_name$",
+        "^fathersname$"
+      ],
+      "value": "James Kilcoyne",
+      "hard": true
+    },
+    {
+      "label": "Mother's Name",
+      "match": [
+        "^mothers?_(maiden_)?name$",
+        "^mothersname$"
+      ],
+      "value": "Bridget. Kilcoyne",
+      "hard": true
+    },
+    {
+      "label": "Full Name",
+      "match": [
+        "^full_name$",
+        "^deceased_name$",
+        "^name_of_deceased$",
+        "^fullname$"
+      ],
+      "value": "Mary Lawless"
+    },
+    {
+      "label": "Age",
+      "match": [
+        "^age",
+        "^ageinyears"
+      ],
+      "value": "46 yrs 6 mos 26 days"
+    },
+    {
+      "label": "Colour",
+      "match": [
+        "^colou?r$"
+      ],
+      "value": "White"
+    },
+    {
+      "label": "Marital Status",
+      "match": [
+        "marital",
+        "single_married",
+        "^singlemarried"
+      ],
+      "value": "Married"
+    },
+    {
+      "label": "Occupation",
+      "match": [
+        "^occupation"
+      ],
+      "value": "Housewife"
+    },
+    {
+      "label": "Birthplace",
+      "match": [
+        "^birthplace$",
+        "^place_of_birth$"
+      ],
+      "value": "Ireland"
+    },
+    {
+      "label": "How long in U.S.",
+      "match": [
+        "how_long_in_(the_)?u_?s",
+        "howlongin(the)?us"
+      ],
+      "value": "35 Years"
+    },
+    {
+      "label": "How long resident in City of New York",
+      "match": [
+        "resident",
+        "city_of_new_york",
+        "nyc"
+      ],
+      "value": "35 Years"
+    },
+    {
+      "label": "Father's Birthplace",
+      "match": [
+        "fathers?_birthplace",
+        "fathersbirthplace"
+      ],
+      "value": "Ireland"
+    },
+    {
+      "label": "Mother's Birthplace",
+      "match": [
+        "mothers?_birthplace",
+        "mothersbirthplace"
+      ],
+      "value": "Ireland"
+    },
+    {
+      "label": "Cause of Death",
+      "match": [
+        "cause_of_death",
+        "direct_cause"
+      ],
+      "value": "Pulmonary Tuberculosis"
+    },
+    {
+      "label": "Place of Death",
+      "match": [
+        "place_of_death",
+        "placeofdeath"
+      ],
+      "value": "Rockaway Beach"
+    },
+    {
+      "label": "Attended from",
+      "match": [
+        "attended_from"
+      ],
+      "value": "Jan 16 1903"
+    },
+    {
+      "label": "Attended to",
+      "match": [
+        "attended_to"
+      ],
+      "value": "Jan 19 1903"
+    },
+    {
+      "label": "Time of death",
+      "match": [
+        "death_hour",
+        "time_of_death",
+        "^hour"
+      ],
+      "value": "9:15",
+      "accept": [
+        "9.15"
+      ]
+    },
+    {
+      "label": "Place of Burial",
+      "match": [
+        "place_of_burial",
+        "burial_place",
+        "placeofburial"
+      ],
+      "value": "Holy Cross Cemetery"
+    },
+    {
+      "label": "Date of Burial",
+      "match": [
+        "date_of_burial",
+        "burial_date"
+      ],
+      "value": "Jany 21st 1903",
+      "accept": [
+        "Jany 21 st 1903"
+      ]
+    },
+    {
+      "label": "Undertaker",
+      "match": [
+        "^undertaker$",
+        "^undertaker_name$"
+      ],
+      "value": "Geo. P. McHugh"
+    },
+    {
+      "label": "Undertaker residence",
+      "match": [
+        "undertaker_(residence|address)"
+      ],
+      "value": "744 Myrtle Ave, Bklyn N.Y.",
+      "accept": [
+        "744 Myrtle Ave Bklyn N.Y."
+      ]
+    },
+    {
+      "label": "Physician signature",
+      "match": [
+        "physician_signature",
+        "physician_name",
+        "^signature$"
+      ],
+      "value": "F[?]. Hatfield"
+    }
+  ]
+}

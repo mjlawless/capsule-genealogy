@@ -1,0 +1,10 @@
+{
+  "name": "nyc-death-1905-robert-euin",
+  "capture_id": "20260719-a860historicalvitalrecordsnycgov-9c526f84",
+  "notes": [
+    "Certificate K-1905-22719 (Robert Euin sr). REQ-006 §3: the NYC index (the DOM panel, stored as the assertion 'date | 1905-11-12') gives 12 November 1905; the certificate says 12 December 1905, twice.",
+    "This gold scores the conflict path (§8.4): a conflict against the index value 1905-11-12 must be emitted. Field-level gold has not been hand-read for this certificate yet."
+  ],
+  "fields": [],
+  "expect_conflicts": ["1905-11-12"]
+}

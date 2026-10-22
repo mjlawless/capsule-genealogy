@@ -9,6 +9,11 @@
         margin: 0;
         padding: 12px;
       }
+      /* `hidden` must win: `.row { display: flex }` beat the browser's own rule, so the empty
+         version banner always showed as a yellow bar under the title. */
+      [hidden] {
+        display: none !important;
+      }
       h1 {
         font-size: 15px;
         margin: 0 0 8px;

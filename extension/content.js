@@ -386,8 +386,17 @@
     // The record image (REQ-001). `full` is the only good outcome: degraded or failed means
     // the record is NOT mined and stays on the queue — a screen-res scan is not evidence we
     // can rely on once Ancestry is gone.
+    // `none` with nothing armed is an ordinary page that has no separate record image: Find
+    // a Grave, a newspaper article, an index entry. The backend raises no follow-up for it
+    // (`_image_follow_up`), but this toast called it "IMAGE ✗ none — NOT mined" in red, so
+    // every first capture on a free site looked like a failure (free-sites test pass).
+    // `none` is never returned on Ancestry, and a tile viewer whose image IS the record is
+    // caught by verify_ok (REQ-007 §3.3), so only an armed download that never came stays red.
+    const plainPage =
+      res.image_status === "none" &&
+      String(res.image_skipped || "").startsWith("no download was armed");
     let image = "";
-    if (res.image_status) {
+    if (res.image_status && !plainPage) {
       image =
         res.image_status === "full"
           ? ", IMAGE ✓ full"
@@ -458,6 +467,7 @@
         !warnings.length &&
         !missed.length &&
         (!res.image_status ||
+          plainPage ||
           res.image_status === "full" ||
           res.image_status === "index-only-no-image")
     );

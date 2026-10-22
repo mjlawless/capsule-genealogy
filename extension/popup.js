@@ -169,11 +169,45 @@ async function grabPage(grabMedia, withBytes, maxItems, maxBytes) {
     if (!candidates.has(abs)) candidates.set(abs, { filename: fileNameFromUrl(abs), hintMime });
   };
 
-  for (const el of document.querySelectorAll("embed[src], iframe[src]")) {
+  for (const el of document.querySelectorAll("embed[src]")) {
     add(el.getAttribute("src"), el.type || "");
   }
   for (const el of document.querySelectorAll("object[data]")) {
     add(el.getAttribute("data"), el.type || "");
+  }
+  // An <iframe> is usually another web page, not a file: on Find a Grave, ad, tracking and
+  // consent frames were archived as inert .bin files with a warning each, Capture asked for
+  // access to the ad hosts, and the frames took item slots a scan needed. Take an http(s)
+  // frame only when its path names a file Capsule archives or it declares a PDF (the rules
+  // media-detect.js already applies). Those frames are documents, so they still come before
+  // the images. blob:/data: frames are page-local and stay candidates.
+  const FRAME_FILE = /\.(pdf|jpe?g|png|gif|tiff?|webp|jp2)$/i;
+  for (const el of document.querySelectorAll("iframe[src]")) {
+    const src = el.getAttribute("src");
+    // A signed URL names no file and expires, so a declared PDF type counts too, and so does
+    // what a same-site frame is showing. KNOWN LIMIT: an untyped frame from another site at
+    // a URL naming no file is indistinguishable from an ad without fetching it, and fetching
+    // is what asked for the ad hosts; it is skipped. Every frame the corpus ever archived
+    // was an ad, consent or captcha page.
+    const type = el.getAttribute("type") || "";
+    let shown = "";
+    try {
+      shown = (el.contentDocument && el.contentDocument.contentType) || "";
+    } catch (_e) {
+      // another site's frame: not readable
+    }
+    let path = "";
+    try {
+      const u = new URL(src, location.href);
+      path = /^https?:$/.test(u.protocol) ? u.pathname : "local.pdf";
+    } catch (_e) {
+      continue;
+    }
+    if (FRAME_FILE.test(path) || /application\/pdf/i.test(type)) {
+      add(src, type);
+    } else if (/^(application\/pdf|image\/)/i.test(shown)) {
+      add(src, shown);
+    }
   }
   for (const img of document.querySelectorAll("img")) {
     if ((img.naturalWidth || 0) >= 400 && (img.naturalHeight || 0) >= 400) {
@@ -507,15 +541,36 @@ async function captureDocument(button, token, note) {
   }
 }
 
+// The IDs the Capsule app pairs with (capsule/config.py; a test keeps the two lists equal): the
+// unpacked extension's, fixed by the manifest `key`, and the Chrome Web Store copy's.
+const OFFICIAL_EXTENSION_IDS = ["jalijanpiopkphjagoiofcofclmmmaan", "dopmkpbopjegbdngekbdpgpkmpgkgeeo"];
+
+// PURE (tested in node). What to say when the app refuses to pair. On the first real Windows
+// install the cause was an unofficial copy (loaded from a folder without the manifest `key`), and
+// "update the app" sent the user the wrong way; only an official copy means the app is behind.
+function pairRefusedAdvice(extensionId) {
+  if (!OFFICIAL_EXTENSION_IDS.includes(extensionId)) {
+    return (
+      "This copy of the extension (ID " + extensionId + ") isn't an official one, so Capsule " +
+      "won't pair with it. In chrome://extensions, remove it, then click Load unpacked and " +
+      "choose the extension folder inside your Capsule installation (the installer shows it), " +
+      "or install Genealogy Capsule from the Chrome Web Store."
+    );
+  }
+  return (
+    "Capsule is running but doesn't recognize this copy of the extension, so it won't pair. " +
+    "Update the Capsule app by running its installer again (your archive is kept), then " +
+    "reopen this popup."
+  );
+}
+
 async function onCapture() {
   const button = document.getElementById("capture");
   const token = document.getElementById("token").value.trim();
   if (!token) {
     render(
       pairRefused
-        ? "Capsule is running but doesn't recognize this copy of the extension, so it won't " +
-            "pair. Update the Capsule app by running its installer again (your archive is " +
-            "kept), then reopen this popup."
+        ? pairRefusedAdvice(chrome.runtime.id)
         : "Capsule isn't paired yet. Reopen this popup and it pairs by itself; or paste the " +
             "token printed by `capsule serve` into the Token field."
     );

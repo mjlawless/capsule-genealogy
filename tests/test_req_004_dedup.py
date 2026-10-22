@@ -496,3 +496,43 @@ def test_capsule_query_reports_the_existing_capture(tmp_path):
         ],
     )
     assert json.loads(miss.output)["captured"] is False
+
+
+# -- BUG-024: the Irish census site keeps its record id in the fragment --------
+
+_CENSUS = "https://nationalarchives.ie/collections/search-the-census/census-record/"
+
+
+def test_census_records_reached_from_search_are_two_identities():
+    """Search results link to `census-record/#id=…`; the page reads the id from there."""
+    from capsule.pipeline.dedup import record_identity
+
+    first = record_identity(_CENSUS + "#id=2285856&c20_year=1911")
+    second = record_identity(_CENSUS + "#id=2285857&c20_year=1911")
+    assert first != second
+    assert first != record_identity(_CENSUS)
+
+
+def test_both_forms_of_a_census_link_are_one_record():
+    """The search link (`#id=`) and "Link to record" (`?id=`) name the same record."""
+    from capsule.pipeline.dedup import record_identity
+
+    by_fragment = record_identity(_CENSUS + "#id=2285856&c20_year=1911")
+    assert by_fragment == record_identity(_CENSUS + "?id=2285856&c20_year=1911")
+    assert by_fragment == record_identity(
+        "https://www.NationalArchives.ie/collections/search-the-census/census-record/"
+        "?c20_year=1911&id=2285856&utm_source=x#gf_15"
+    )
+
+
+def test_a_second_census_record_is_not_blocked_by_the_first(tmp_path):
+    _capture_into(tmp_path, _CENSUS + "#id=2285856&c20_year=1911")
+    assert _find(tmp_path, _CENSUS + "?id=2285856&c20_year=1911") is not None
+    assert _find(tmp_path, _CENSUS + "#id=2285857&c20_year=1911") is None
+
+
+def test_fragments_elsewhere_are_still_dropped():
+    from capsule.pipeline.dedup import record_identity
+
+    page = "https://nationalarchives.ie/collections/search-the-census/"
+    assert record_identity(page + "#id=1") == record_identity(page)

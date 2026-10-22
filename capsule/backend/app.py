@@ -1598,6 +1598,10 @@ def pair(request: Request, settings: Settings = Depends(get_settings)) -> dict:
     prefix = "chrome-extension://"
     ext_id = origin[len(prefix):] if origin.startswith(prefix) else ""
     if ext_id not in pairable_extension_ids():
+        # Said in the log so a refused pairing can be diagnosed without the user digging through
+        # chrome://extensions (the first real Windows install: an unofficial copy). The origin is
+        # browser-set but still request data, so it is length-capped and shown with repr().
+        _logger.warning("refused to pair with origin %r (not a Capsule extension ID)", origin[:120])
         raise HTTPException(
             status_code=403,
             detail="Only the Capsule extension can pair automatically; paste the token instead.",

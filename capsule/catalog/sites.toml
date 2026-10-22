@@ -1,0 +1,213 @@
+# The sites Genealogy Capsule is known to work with: the source of truth for SITES.md and
+# the README table. After editing, run `uv run python -m capsule.catalog` to regenerate
+# them; a test fails while they are out of date.
+#
+# level:
+#   tested  - used on real research, with verified captures of the pages named in `pages`
+#   special - Capsule has code for this site, but it has not been tested live yet
+#   generic - no site-specific code; the ordinary page capture should work, not yet tested
+# access: free | free-registration | subscription
+# arm_download: the extension has a download profile for the site (download-intercept.js)
+#
+# Public file: never put record URLs, record ids or capture counts here.
+
+[[site]]
+id = "ancestry"
+arm_download = true
+name = "Ancestry"
+url = "https://www.ancestry.com/"
+hosts = ["ancestry.com", "ancestry.co.uk", "ancestry.ca", "ancestry.com.au", "ancestry.de", "ancestry.fr", "ancestry.it", "ancestry.se", "ancestry.mx"]
+access = "subscription"
+level = "tested"
+pages = "Record pages, and record images through Ancestry's own Download button"
+handling = ["record id read from the address, so a record is never captured twice", "household members read from the record", "accepts the image download from Ancestry's image server"]
+limits = "For the image, arm the capture, then use the site's Download button."
+
+[[site]]
+id = "rootsireland"
+name = "RootsIreland"
+url = "https://www.rootsireland.ie/"
+hosts = ["rootsireland.ie"]
+access = "subscription"
+level = "tested"
+pages = "Church and civil record transcription pages"
+handling = ["different records shown at one search address are kept apart"]
+limits = "Transcriptions only: the site shows no images."
+
+[[site]]
+id = "nyc-vital-records"
+name = "NYC Municipal Archives, Historical Vital Records"
+url = "https://a860-historicalvitalrecords.nyc.gov/"
+hosts = ["a860-historicalvitalrecords.nyc.gov"]
+access = "free"
+level = "tested"
+pages = "Birth, marriage and death certificate pages, with the certificate PDF"
+handling = []
+limits = "Allow access to the certificate's file host when Capture asks, or only the page is saved."
+
+[[site]]
+id = "irishgenealogy"
+name = "IrishGenealogy.ie"
+url = "https://www.irishgenealogy.ie/"
+hosts = ["irishgenealogy.ie"]
+access = "free"
+level = "tested"
+pages = "Civil and church record pages, and civil register images"
+handling = []
+limits = ""
+
+[[site]]
+id = "familysearch"
+name = "FamilySearch"
+url = "https://www.familysearch.org/"
+hosts = ["familysearch.org"]
+access = "free-registration"
+level = "tested"
+pages = "Indexed record pages"
+handling = []
+limits = "The image viewer has not been tested yet."
+
+[[site]]
+id = "findagrave"
+name = "Find a Grave"
+url = "https://www.findagrave.com/"
+hosts = ["findagrave.com"]
+access = "free"
+level = "tested"
+pages = "Memorial pages and their photos"
+handling = []
+limits = "If you are signed in, a memorial is saved as private (gated); choose Public in the popup to change that."
+
+[[site]]
+id = "riksarkivet"
+arm_download = true
+name = "Riksarkivet (Swedish National Archives)"
+url = "https://sok.riksarkivet.se/"
+hosts = ["riksarkivet.se"]
+access = "free"
+level = "tested"
+pages = "Register images in the image viewer, through the site's own download"
+handling = ["accepts the image download from the archive's image server", "the image number in view is recorded"]
+limits = "Images only: these pages have no text to read."
+
+[[site]]
+id = "archion"
+name = "Archion"
+url = "https://www.archion.de/"
+hosts = ["archion.de"]
+access = "subscription"
+level = "tested"
+pages = "Church register images in the viewer"
+handling = ["the register page in view is recorded and cited", "the archive and register named in the citation", "warns when no page image was saved"]
+limits = "Images only: these pages have no text to read."
+
+[[site]]
+id = "nli-registers"
+name = "National Library of Ireland, Catholic Parish Registers"
+url = "https://registers.nli.ie/"
+hosts = ["registers.nli.ie"]
+access = "free"
+level = "tested"
+pages = "Register pages in the viewer"
+handling = ["saves the whole page in view, not the viewer's tiles", "the register and page cited", "warns when no page image was saved"]
+limits = "Images only: these pages have no text to read."
+
+[[site]]
+id = "matricula"
+name = "Matricula"
+url = "https://data.matricula-online.eu/"
+hosts = ["matricula-online.eu"]
+access = "free"
+level = "special"
+pages = "Church register images in the viewer"
+handling = ["the register page in view is recorded and cited", "warns when no page image was saved"]
+limits = "Tested live: the page is saved, but the register image is not yet (the capture says so rather than reporting success)."
+
+[[site]]
+id = "newspapers"
+arm_download = true
+name = "Newspapers.com"
+url = "https://www.newspapers.com/"
+hosts = ["newspapers.com"]
+access = "subscription"
+level = "special"
+pages = "Newspaper page images, through the site's own Download (JPG)"
+handling = ["accepts the image download from the site's image server"]
+limits = "Page captures work; saving the page image with an armed download was fixed recently and awaits a live check."
+
+[[site]]
+id = "nai-census"
+name = "National Archives of Ireland, Census 1821-1911"
+url = "https://nationalarchives.ie/collections/search-the-census/"
+hosts = ["nationalarchives.ie"]
+access = "free"
+level = "special"
+pages = "Census household and person pages"
+handling = ["each census record kept apart, whichever link you followed to it"]
+limits = "Allow access to nationalarchives.ie when Capture asks, to save the census form images."
+
+[[site]]
+id = "chronicling-america"
+name = "Chronicling America (Library of Congress)"
+url = "https://www.loc.gov/collections/chronicling-america/"
+hosts = ["loc.gov"]
+access = "free"
+level = "tested"
+pages = "Newspaper page views"
+handling = []
+limits = "Saves the page and a PDF of it; the full-resolution newspaper image is not saved yet."
+
+[[site]]
+id = "internet-archive"
+name = "Internet Archive"
+url = "https://archive.org/"
+hosts = ["archive.org"]
+access = "free"
+level = "tested"
+pages = "Book pages in the reader"
+handling = []
+limits = "Allow access to the archive's image server when Capture asks, to save the scan. The reader's neighbouring pages are saved with it for now."
+
+[[site]]
+id = "ellis-island"
+name = "Ellis Island passenger records"
+url = "https://heritage.statueofliberty.org/"
+hosts = ["heritage.statueofliberty.org"]
+access = "free-registration"
+level = "generic"
+pages = "Passenger records and manifests"
+handling = []
+limits = "Needs a free account; not tested yet."
+
+[[site]]
+id = "american-ancestors"
+name = "American Ancestors (free databases)"
+url = "https://www.americanancestors.org/"
+hosts = ["americanancestors.org"]
+access = "free-registration"
+level = "generic"
+pages = "Record pages in the free guest-member databases"
+handling = []
+limits = "Needs a free guest account; not tested yet."
+
+[[site]]
+id = "trove"
+name = "Trove (National Library of Australia)"
+url = "https://trove.nla.gov.au/"
+hosts = ["trove.nla.gov.au"]
+access = "free"
+level = "tested"
+pages = "Newspaper articles, with their corrected text"
+handling = []
+limits = "May be saved as private (gated) even when you are signed out; choose Public in the popup to change that."
+
+[[site]]
+id = "nys-historic-newspapers"
+name = "NYS Historic Newspapers"
+url = "https://nyshistoricnewspapers.org/"
+hosts = ["nyshistoricnewspapers.org"]
+access = "free"
+level = "generic"
+pages = "Historic newspaper pages"
+handling = []
+limits = "The site may ask you to confirm you are human before showing a page."

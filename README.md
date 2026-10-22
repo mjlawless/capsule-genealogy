@@ -5,7 +5,7 @@ computer that turn the record page you are looking at into an archived, cited, h
 that you keep: the page, the record image, what the record says, and an Evidence Explained
 citation.
 
-> **Status: v0.2.2, early access.** Capsule has been used daily on real research (hundreds
+> **Status: v0.2.3, early access.** Capsule has been used daily on real research (hundreds
 > of captures from Irish parish registers, NYC vital records, Ancestry, Archion, Riksarkivet,
 > Newspapers.com and more). Installing it takes one command and a few clicks in Chrome. You can
 > try it **without an AI key**; add one later to have records read. A Chrome Web Store listing
@@ -36,6 +36,35 @@ The rules it will not bend:
 - **Paywalled content stays private.** Pages from subscription sites are kept only on your
   computer, marked copyright-protected, and never published or archived anywhere else.
 - **A capture that does not hold the record does not report success.**
+
+## Sites it works with
+
+Capsule captures most record pages. These are the sites it is known to work with:
+
+<!-- sites:start (generated from capsule/catalog/sites.toml) -->
+| Site | Access | Status |
+|---|---|---|
+| [Ancestry](https://www.ancestry.com/) | Subscription | Tested in real use |
+| [RootsIreland](https://www.rootsireland.ie/) | Subscription | Tested in real use |
+| [NYC Municipal Archives, Historical Vital Records](https://a860-historicalvitalrecords.nyc.gov/) | Free | Tested in real use |
+| [IrishGenealogy.ie](https://www.irishgenealogy.ie/) | Free | Tested in real use |
+| [FamilySearch](https://www.familysearch.org/) | Free (sign-up) | Tested in real use |
+| [Find a Grave](https://www.findagrave.com/) | Free | Tested in real use |
+| [Riksarkivet (Swedish National Archives)](https://sok.riksarkivet.se/) | Free | Tested in real use |
+| [Archion](https://www.archion.de/) | Subscription | Tested in real use |
+| [National Library of Ireland, Catholic Parish Registers](https://registers.nli.ie/) | Free | Tested in real use |
+| [Chronicling America (Library of Congress)](https://www.loc.gov/collections/chronicling-america/) | Free | Tested in real use |
+| [Internet Archive](https://archive.org/) | Free | Tested in real use |
+| [Trove (National Library of Australia)](https://trove.nla.gov.au/) | Free | Tested in real use |
+| [Matricula](https://data.matricula-online.eu/) | Free | Built-in support, not yet tested live |
+| [Newspapers.com](https://www.newspapers.com/) | Subscription | Built-in support, not yet tested live |
+| [National Archives of Ireland, Census 1821-1911](https://nationalarchives.ie/collections/search-the-census/) | Free | Built-in support, not yet tested live |
+| [Ellis Island passenger records](https://heritage.statueofliberty.org/) | Free (sign-up) | Should work, not yet tested |
+| [American Ancestors (free databases)](https://www.americanancestors.org/) | Free (sign-up) | Should work, not yet tested |
+| [NYS Historic Newspapers](https://nyshistoricnewspapers.org/) | Free | Should work, not yet tested |
+
+Details and notes for each site: [SITES.md](SITES.md).
+<!-- sites:end -->
 
 ## Before you install: what to know
 
@@ -126,6 +155,8 @@ uv run capsule extract --all          # read pages archived before you added a k
 uv run capsule supersede <old_capture_id> --by <new_capture_id>
                                      # mark a capture as replaced by a better one
 uv run capsule index                 # rebuild the collection page
+uv run capsule export archive.zip    # package the whole archive to move to another computer
+uv run capsule import archive.zip    # merge one in (adds what is missing; safe to re-run)
 uv run capsule transcribe <capture_id>
                                      # AI reading of a handwritten scan (a reading aid,
                                      # never evidence; about $0.60 per two-page certificate)

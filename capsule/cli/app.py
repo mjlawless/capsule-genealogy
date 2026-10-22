@@ -28,6 +28,16 @@ from capsule.agent.anthropic_transport import AnthropicTransport
 from capsule.agent.base import DEFAULT_MODEL, Agent
 from capsule.capture.manifest import sha256_hex
 from capsule.collection.index import write_index
+from capsule.collection.transfer import (
+    ImportPlan,
+    TransferError,
+    capture_folders,
+    export_archive,
+    import_archive,
+    import_lock,
+    recover_staging,
+    refresh_notes,
+)
 from capsule.config import (
     data_dir,
     default_captures_root,
@@ -944,6 +954,136 @@ def reindex(
             repository.close()
     path = write_index(captures)
     typer.echo(f"wrote {path}")
+
+
+def _count_captures(captures: Path) -> int:
+    return sum(1 for f in capture_folders(captures) if not f.trashed)
+
+
+@app.command("export")
+def export_cmd(
+    out: Path = typer.Argument(..., help="The .zip file to write (outside the archive)."),
+    captures: Path = typer.Option(
+        default_factory=default_captures_root, help="Capture-folder collection dir."
+    ),
+    db: Path = typer.Option(default_factory=default_db_path, help="SQLite evidence index path."),
+) -> None:
+    """Package this whole archive into one file, to move it to another computer.
+
+    Safe while Capsule is running: the database is snapshotted, and a capture still being
+    written is left for the next export. On the other computer, `capsule import <file>`.
+    """
+    typer.echo(f"Exporting the archive at {db.parent} ({_count_captures(captures)} captures)")
+    try:
+        result = export_archive(db, captures, out)
+    except TransferError as exc:
+        typer.secho(f"Export failed: {exc}", fg="red", err=True)
+        raise typer.Exit(1)
+    typer.echo(f"wrote {result.path}: {result.sources} sources, {result.folders} capture folders")
+    if result.skipped:
+        typer.echo(f"left out {len(result.skipped)} folder(s) with no database row yet")
+    typer.secho(
+        "This file holds your whole archive, including pages from subscription sites. "
+        "Keep it private, and delete it once it is imported.",
+        fg="yellow",
+    )
+
+
+@app.command("import")
+def import_cmd(
+    package: Path = typer.Argument(
+        ...,
+        help="A file made by `capsule export`, or an archive folder that nothing is using.",
+    ),
+    captures: Path = typer.Option(
+        default_factory=default_captures_root, help="Capture-folder collection dir."
+    ),
+    db: Path = typer.Option(default_factory=default_db_path, help="SQLite evidence index path."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be added; change nothing."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Do not ask for confirmation."),
+) -> None:
+    """Merge another Capsule archive into this one. Adds what is missing; never overwrites,
+    moves or deletes anything, so it is safe to run again later to bring newer captures over."""
+    typer.echo(f"Importing into the archive at {db.parent} ({_count_captures(captures)} captures)")
+    typer.echo(f"from {package}")
+
+    def confirm(plan: ImportPlan) -> bool:
+        rows = sum(plan.new_rows.values())
+        typer.echo(
+            f"\n{plan.source_folders} capture folders in the import: {len(plan.new_folders)} new, "
+            f"{plan.present} already here. {rows} new database rows."
+        )
+        if plan.new_files:
+            typer.echo(
+                f"{len(plan.new_files)} new file(s) (transcriptions, logs) for captures already here."
+            )
+        if plan.records_without_folder:
+            typer.echo(
+                f"{plan.records_without_folder} record(s) have no capture folder in the import "
+                "(usually captures that failed part-way); they are copied as they are."
+            )
+        if plan.lifecycle_kept_here:
+            typer.secho(
+                f"{len(plan.lifecycle_kept_here)} capture(s) were marked replaced or reinstated "
+                "differently on the two computers; this computer's decision is kept.",
+                fg="yellow",
+            )
+        if plan.not_in_database:
+            typer.echo(
+                f"{len(plan.not_in_database)} folder(s) have no database record yet and are left "
+                "for a later import."
+            )
+        if plan.conflicts:
+            typer.secho(
+                f"{len(plan.conflicts)} folder(s) here share a name with the import but differ; "
+                f"kept as they are: {', '.join(plan.conflicts[:5])}",
+                fg="yellow",
+            )
+        if plan.trashed_elsewhere:
+            typer.echo(
+                f"{len(plan.trashed_elsewhere)} capture(s) are in the trash in the import but "
+                "active here; left active."
+            )
+        if dry_run:
+            typer.echo("Dry run: nothing was changed.")
+            return False
+        return yes or typer.confirm(f"Add {len(plan.new_folders)} captures to this archive?")
+
+    try:
+        result = import_archive(package, db_path=db, captures_root=captures, confirm=confirm)
+    except TransferError as exc:
+        typer.secho(f"Import stopped; nothing from it was added: {exc}", fg="red", err=True)
+        raise typer.Exit(1)
+    nothing_new = result.plan.nothing_new
+    if dry_run or (not result.applied and not nothing_new) or not db.is_file():
+        if nothing_new:
+            typer.echo("Nothing new to import.")
+        return  # a dry run or a "no": nothing is written, not even the index
+    # Re-project what the folders show from the merged store. On a re-run with nothing new,
+    # this is what repairs an import that stopped between its commit and these steps.
+    if nothing_new and captures.is_dir():
+        with import_lock(captures):
+            recover_staging(captures, db)
+    repository = Repository(db)
+    try:
+        reconcile_lifecycle(repository, captures)
+    finally:
+        repository.close()
+    refresh_notes(db, captures)
+    write_index(captures)
+    if nothing_new:
+        typer.echo("Nothing new to import.")
+        return
+    added = f"Imported {result.added_folders} captures"
+    if result.added_files:
+        added += f" and {result.added_files} new file(s) for captures already here"
+    typer.secho(added + ".", fg="green")
+    if result.not_verified:
+        typer.secho(
+            f"{len(result.not_verified)} imported capture(s) do not pass verification, as they "
+            f"did not where they came from: {', '.join(result.not_verified[:5])}",
+            fg="yellow",
+        )
 
 
 @app.command()

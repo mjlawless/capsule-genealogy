@@ -7,8 +7,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    # Windows is new to CI with v0.1.0; report it, but do not block on it yet.
-    continue-on-error: ${{ matrix.os == 'windows-latest' }}
+    # Windows blocks like the others since v0.2.3 (it passed with 0.2.1/0.2.2 bar one test bug).
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
@@ -39,7 +38,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     steps:
       - uses: actions/checkout@v4
       - name: Install (macOS / Linux)

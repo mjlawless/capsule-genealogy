@@ -11,6 +11,8 @@ import base64
 import hashlib
 import json
 import re
+import subprocess
+import shutil
 from pathlib import Path
 
 import pytest
@@ -82,6 +84,46 @@ def test_the_chrome_web_store_copy_pairs_by_itself(client, monkeypatch):
     resp = client.post("/pair", headers={"Origin": f"chrome-extension://{CAPSULE_STORE_EXTENSION_ID}"})
     assert resp.status_code == 200, resp.text
     assert resp.json() == {"token": tb._TOKEN}
+
+
+def test_the_popup_knows_the_same_official_ids_as_the_app():
+    from capsule.config import CAPSULE_EXTENSION_ID, CAPSULE_STORE_EXTENSION_ID
+
+    source = (_EXT / "popup.js").read_text(encoding="utf-8")
+    listed = re.search(r"const OFFICIAL_EXTENSION_IDS = \[([^\]]*)\]", source).group(1)
+    assert sorted(re.findall(r'"([a-p]{32})"', listed)) == sorted(
+        [CAPSULE_EXTENSION_ID, CAPSULE_STORE_EXTENSION_ID]
+    )
+
+
+def _refused_advice(extension_id: str) -> str:
+    source = (_EXT / "popup.js").read_text(encoding="utf-8")
+    ids = source[source.index("const OFFICIAL_EXTENSION_IDS") :]
+    ids = ids[: ids.index(";") + 1]
+    start = source.index("function pairRefusedAdvice(")
+    fn = source[start : source.index("\n}\n", start) + 3]
+    script = ids + "\n" + fn + f"\nconsole.log(JSON.stringify(pairRefusedAdvice({json.dumps(extension_id)})));"
+    proc = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=30)
+    assert proc.returncode == 0, proc.stderr
+    return json.loads(proc.stdout)
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_an_unofficial_copy_is_told_so_not_to_update_the_app():
+    """The first real Windows install: a copy loaded from a folder without the manifest `key`
+    got a path-derived ID, and the popup wrongly said to update the app."""
+    advice = _refused_advice("bgmnjfaogjkeicjkffcbdljhlncloijn")
+    assert "isn't an official one" in advice and "Load unpacked" in advice
+    assert "installer again" not in advice
+    official = _refused_advice("jalijanpiopkphjagoiofcofclmmmaan")
+    assert "installer again" in official
+
+
+def test_a_refused_pairing_is_logged_with_the_origin(client, caplog):
+    with caplog.at_level("WARNING"):
+        resp = client.post("/pair", headers={"Origin": "chrome-extension://bgmnjfaogjkeicjkffcbdljhlncloijn"})
+    assert resp.status_code == 403
+    assert "bgmnjfaogjkeicjkffcbdljhlncloijn" in caplog.text and "refused to pair" in caplog.text
 
 
 def test_a_store_build_id_can_be_added(client, monkeypatch):

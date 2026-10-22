@@ -9,6 +9,7 @@ normal popup by itself once the app is running. These run the shipped `setupScre
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import stat
@@ -97,7 +98,16 @@ def test_the_double_click_installers_run_the_readme_install():
     command = _COMMAND.read_text(encoding="utf-8")
     assert unix.split()[2] in command  # the README's install.sh URL
     assert command.startswith("#!/bin/sh\n")
-    assert _COMMAND.stat().st_mode & stat.S_IXUSR, "the .command must be executable in the repo"
+    # Git's recorded mode, not the file's: Windows file systems have no executable bit (the
+    # v0.2.1 Windows CI failed on st_mode), and git's index carries the mode the release uses.
+    index = subprocess.run(
+        ["git", "ls-files", "-s", "--", "installers/Install Capsule.command"],
+        cwd=_ROOT, capture_output=True, text=True, timeout=30,
+    )
+    if index.returncode == 0 and index.stdout:
+        assert index.stdout.startswith("100755"), "the .command must be committed executable"
+    elif os.name != "nt":
+        assert _COMMAND.stat().st_mode & stat.S_IXUSR, "the .command must be executable"
     cmd = _CMD.read_text(encoding="utf-8")
     assert "irm https://raw.githubusercontent.com/mjlawless/capsule-genealogy/main/install.ps1 | iex" in cmd
     assert win.split('"')[1] in cmd  # the same irm | iex the README runs

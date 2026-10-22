@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.3 — move your archive between computers, and fixes from a test pass
+
+- **Move your archive to another computer.** `capsule export archive.zip` packages the whole
+  archive, safely while Capsule runs; `capsule import archive.zip` merges it into another
+  install. It adds only what is missing, never overwrites or deletes, and can be re-run later
+  to bring newer captures across. `--dry-run` shows what it would add.
+- **A list of the sites Capsule works with**, in [SITES.md](SITES.md) and the README, from a
+  test pass on the top free genealogy sites.
+- **A complete capture of an ordinary page now shows a green confirmation.** It said "IMAGE ✗
+  none — NOT mined" in red on every page without a separate record image.
+- **Irish census records are no longer mistaken for one another.** The census site keeps the
+  record number after a `#` in the address, which Capsule ignored when checking for duplicates.
+- **The popup no longer shows an empty yellow bar** under its title.
+- **Ad, tracking and consent frames are no longer saved as files** with a warning each, and
+  Capture no longer asks for access to ad sites.
+- The popup says when it is an unofficial copy of the extension, and how to fix that.
+
 ## 0.2.2 — Windows install fixes
 
 Found on the first real Windows install of 0.2.1:

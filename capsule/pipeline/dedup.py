@@ -16,7 +16,8 @@ Identity, not URL string equality:
   IrishGenealogy carry the record id IN the query (`view_detail.php?recordid=277156`):
   stripping it would collapse every record on those sites into one identity and
   falsely BLOCK the second record ever captured. A false "new" merely re-captures;
-  a false block loses evidence. Only the fragment is dropped.
+  a false block loses evidence. Only the fragment is dropped, except on the Irish
+  census site, which carries its record id there (BUG-024).
 
 Blocking is reserved for VERIFIED-COMPLETE captures: `verify_capture` passes and the
 record image is terminal-good (`full`, or `index-only-no-image`; a non-Ancestry
@@ -38,7 +39,7 @@ import logging
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Optional, Union
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from capsule.capture.manifest import verify_capture
 from capsule.pipeline.ancestry import IdPair, parse_apid, record_ids_from_url
@@ -99,15 +100,35 @@ def _resolve_ids(url: Optional[str], expected_apid: Optional[str]) -> Optional[I
     return ids if ids is not None else record_ids_from_url(url)
 
 
+# BUG-024: the National Archives of Ireland census site links every search result to
+# `census-record/#id=2285856&c20_year=1911`, and the record page reads the record from the
+# FRAGMENT. Dropping it made every census record one identity, so the second census capture
+# ever made would be falsely blocked. Its "Link to record" gives the same record as
+# `?id=…&c20_year=…`, so both forms fold to that one query.
+_NAI_HOSTS = frozenset({"nationalarchives.ie", "www.nationalarchives.ie"})
+_NAI_CENSUS_RECORD = "/collections/search-the-census/census-record/"
+
+
 def _normalize_url(url: str) -> str:
-    """Case-fold scheme/host and drop the fragment. The query STAYS (see module doc)."""
+    """Case-fold scheme/host and drop the fragment. The query STAYS (see module doc).
+
+    The one exception is a site whose record id lives in the fragment (BUG-024).
+    """
     try:
         parts = urlsplit(url)
     except ValueError:
         return url
-    return urlunsplit(
-        (parts.scheme.lower(), parts.netloc.lower(), parts.path, parts.query, "")
-    )
+    host = parts.netloc.lower()
+    query = parts.query
+    if host in _NAI_HOSTS and parts.path == _NAI_CENSUS_RECORD:
+        host = "nationalarchives.ie"
+        params = dict(parse_qsl(parts.query))
+        params.update(parse_qsl(parts.fragment))
+        if params.get("id"):
+            query = urlencode(
+                [(k, params[k]) for k in ("id", "c20_year") if params.get(k)]
+            )
+    return urlunsplit((parts.scheme.lower(), host, parts.path, query, ""))
 
 
 def find_capture(

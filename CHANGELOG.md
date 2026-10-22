@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.1 — no terminal needed
+
+- **New name: Genealogy Capsule.** The extension, popup, collection page, installers and docs
+  now use the full name; "Capsule" remains the short form. Nothing you have changes: the
+  `capsule` command, your archive folder and your settings stay where they are.
+- **Double-click installers:** `Install-Capsule.cmd` for Windows and `Install-Capsule-mac.zip`
+  for macOS, attached to each release. They run the same install as the one-line command, in a
+  window you can watch. They are not code-signed yet, so Windows and macOS warn once; the README
+  and the extension say exactly what to click.
+- **A first-run screen in the extension.** If the Capsule app isn't installed (or isn't
+  running), the popup says so, offers the installer for your system, and switches to the normal
+  popup by itself as soon as Capsule starts. Ready for installing the extension from the Chrome
+  Web Store before the app.
+- **Chrome Web Store ready:** the app pairs with the Web Store copy of the extension by itself,
+  as it does with the unpacked one.
+- Capture errors now point to the popup instead of a terminal command, and the popup says
+  plainly when an older Capsule app doesn't recognize the extension.
+- The installers' last message no longer asks Web Store users to load the extension again.
+- CI: the Windows install test now runs its checks in the same step as the installer.
+
 ## 0.2.0 — easy to evaluate
 
 - **One-line install** for macOS/Linux and Windows. It installs everything, starts Capsule at

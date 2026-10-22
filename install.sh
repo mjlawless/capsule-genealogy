@@ -30,7 +30,7 @@ LABEL="io.capsule.serve"
 say() { printf '%s\n' "$*"; }
 fail() { printf 'Capsule install failed: %s\n' "$*" >&2; exit 1; }
 
-say "Installing Capsule into $APP"
+say "Installing Genealogy Capsule into $APP"
 
 # 1. uv -----------------------------------------------------------------------------------
 if ! command -v uv >/dev/null 2>&1; then
@@ -350,7 +350,8 @@ else
   say "To start it again later: \"$LAUNCHER\""
 fi
 say ""
-say "Last step, in Google Chrome:"
+say "Already added Capsule to Chrome (from the Chrome Web Store)? Then you're done: click its"
+say "icon and it connects by itself. Otherwise, the last step, in Google Chrome:"
 say "  1. Open chrome://extensions and turn on Developer mode (top right)."
 say "  2. Click 'Load unpacked' and choose this folder:"
 say "       $APP/extension"

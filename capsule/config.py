@@ -61,14 +61,19 @@ def work_queue_enabled() -> bool:
 
 #: The Chrome extension IDs allowed to pair without a pasted token (v0.2). The first is the
 #: unpacked extension's: `extension/manifest.json` carries a public `key`, so Chrome gives it
-#: this same ID on every machine (a test pins the two together). A Chrome Web Store build gets
-#: its own ID; add it with CAPSULE_EXTENSION_IDS (comma-separated).
+#: this same ID on every machine (a test pins the two together). The Chrome Web Store copy has
+#: the ID the store assigned (v0.2.1); any other build can be added with CAPSULE_EXTENSION_IDS
+#: (comma-separated).
 CAPSULE_EXTENSION_ID = "jalijanpiopkphjagoiofcofclmmmaan"
+CAPSULE_STORE_EXTENSION_ID = "dopmkpbopjegbdngekbdpgpkmpgkgeeo"
 
 
 def pairable_extension_ids() -> frozenset[str]:
     extra = os.environ.get("CAPSULE_EXTENSION_IDS", "")
-    return frozenset({CAPSULE_EXTENSION_ID} | {i.strip() for i in extra.split(",") if i.strip()})
+    return frozenset(
+        {CAPSULE_EXTENSION_ID, CAPSULE_STORE_EXTENSION_ID}
+        | {i.strip() for i in extra.split(",") if i.strip()}
+    )
 
 
 def token_path() -> Path:

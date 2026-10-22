@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -70,6 +71,17 @@ def test_anyone_else_is_refused(client, origin):
     resp = client.post("/pair", headers=headers)
     assert resp.status_code == 403
     assert tb._TOKEN not in resp.text
+
+
+def test_the_chrome_web_store_copy_pairs_by_itself(client, monkeypatch):
+    """v0.2.1: the store assigned its own ID; a store install must pair with no setting."""
+    from capsule.config import CAPSULE_STORE_EXTENSION_ID
+
+    monkeypatch.delenv("CAPSULE_EXTENSION_IDS", raising=False)
+    assert re.fullmatch(r"[a-p]{32}", CAPSULE_STORE_EXTENSION_ID)
+    resp = client.post("/pair", headers={"Origin": f"chrome-extension://{CAPSULE_STORE_EXTENSION_ID}"})
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"token": tb._TOKEN}
 
 
 def test_a_store_build_id_can_be_added(client, monkeypatch):

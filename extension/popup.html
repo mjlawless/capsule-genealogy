@@ -64,10 +64,52 @@
       .footer a {
         font-size: 12px;
       }
+      #setup h2 {
+        font-size: 14px;
+        margin: 0 0 6px;
+      }
+      #setup p {
+        margin: 0 0 8px;
+      }
+      #setup-command {
+        font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+        user-select: all;
+      }
+      #setup-wait {
+        color: #57606a;
+      }
+      a.button {
+        display: inline-block;
+        padding: 8px 14px;
+        border-radius: 6px;
+        background: #1a7f37;
+        color: #fff;
+        font-weight: 600;
+        text-decoration: none;
+      }
     </style>
   </head>
   <body>
-    <h1>Capsule</h1>
+    <h1>Genealogy Capsule</h1>
+    <!-- v0.2.1: the first-run screen. Shown instead of the controls below whenever the Capsule
+         app on this computer doesn't answer: most people install the extension (from the Web
+         Store) before the app, and a bare "backend not running" lost them. It watches for the
+         app and switches to the normal popup by itself once it is running. -->
+    <section id="setup" hidden>
+      <h2 id="setup-title"></h2>
+      <p id="setup-body"></p>
+      <p><a id="setup-download" class="button" target="_blank" rel="noopener noreferrer"></a></p>
+      <p id="setup-steps"></p>
+      <details id="setup-command-box">
+        <summary id="setup-command-summary">Prefer a command?</summary>
+        <p id="setup-where"></p>
+        <pre id="setup-command"></pre>
+        <div class="row"><button id="setup-copy">Copy command</button></div>
+      </details>
+      <p><a id="setup-docs" target="_blank" rel="noopener noreferrer">Step-by-step instructions ↗</a></p>
+      <p id="setup-wait">Waiting for Capsule… this changes by itself once it's running.</p>
+    </section>
+    <div id="main">
     <!-- v0.2: shown only when the extension and the Capsule app are different versions. -->
     <div id="version-banner" class="row note" hidden
       style="background:#fff8c5;border:1px solid #d4a72c;border-radius:6px;padding:6px 8px;"></div>
@@ -116,11 +158,12 @@
         <button id="read-pending">Read them now</button>
       </div>
     </details>
-    <pre id="result">Loads the page you are viewing and sends it to your local Capsule backend (run `capsule serve`).</pre>
+    <pre id="result">Saves the page you are viewing into Capsule on this computer.</pre>
     <div class="row footer">
       <a id="index-link" href="http://127.0.0.1:8765/" target="_blank" rel="noopener noreferrer"
         >Open Capsule index ↗</a
       >
+    </div>
     </div>
     <!-- Defines renderPagePdf() for popup.js; must load first. -->
     <script src="render-pdf.js"></script>

@@ -1,6 +1,6 @@
-# Capsule privacy policy
+# Genealogy Capsule privacy policy
 
-*Applies to the Capsule Chrome extension and the Capsule program it works with.*
+*Applies to the Genealogy Capsule Chrome extension and the Genealogy Capsule program it works with ("Capsule" for short).*
 
 **Capsule does not collect any data about you. Nothing is sent to the authors of Capsule.**
 

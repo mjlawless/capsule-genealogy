@@ -1,11 +1,11 @@
-# Capsule
+# Genealogy Capsule
 
 **Evidence-grade genealogy capture.** A Chrome extension plus a small program on your own
 computer that turn the record page you are looking at into an archived, cited, hashed source
 that you keep: the page, the record image, what the record says, and an Evidence Explained
 citation.
 
-> **Status: v0.2.0, early access.** Capsule has been used daily on real research (hundreds
+> **Status: v0.2.1, early access.** Capsule has been used daily on real research (hundreds
 > of captures from Irish parish registers, NYC vital records, Ancestry, Archion, Riksarkivet,
 > Newspapers.com and more). Installing it takes one command and a few clicks in Chrome. You can
 > try it **without an AI key**; add one later to have records read. A Chrome Web Store listing
@@ -64,7 +64,19 @@ FamilySearch, Archion, Riksarkivet, Newspapers.com or any other site it works wi
 
 You need about 10 minutes and Google Chrome.
 
-1. **Install Capsule with one command.**
+1. **Install the Capsule app: download it and double-click.**
+   - **Windows:** [Install-Capsule.cmd](https://github.com/mjlawless/capsule-genealogy/releases/latest/download/Install-Capsule.cmd).
+     Windows may say it protected your PC (the installer isn't signed yet): click **More info**,
+     then **Run anyway**.
+   - **macOS:** [Install-Capsule-mac.zip](https://github.com/mjlawless/capsule-genealogy/releases/latest/download/Install-Capsule-mac.zip).
+     Open it, then double-click **Install Capsule**. If macOS says it can't verify it, click
+     **Done**, open **System Settings › Privacy & Security**, scroll down, click **Open Anyway**
+     and confirm.
+
+   A window shows the install; it takes a minute or two. The Capsule extension's popup offers
+   the same download if you added the extension first.
+
+   **Or with one command,** if you prefer a terminal:
    - macOS (or Linux): open *Terminal* and paste
 
      ```

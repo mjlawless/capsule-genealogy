@@ -24,6 +24,7 @@ const NOTE_DRAFT_PREFIX = "noteDraft:";
 
 // The URL of the tab in view, resolved once on open — the key for this note draft.
 let currentUrl = "";
+let pairRefused = false;
 
 async function loadNoteDraft(url) {
   if (!url) return "";
@@ -99,7 +100,12 @@ async function loadToken() {
   // (it checks the browser-set Origin). Pasting it by hand still works as a fallback.
   try {
     const resp = await fetch(BACKEND.replace(/\/capture$/, "/pair"), { method: "POST" });
-    if (!resp.ok) return "";
+    if (!resp.ok) {
+      // 403: the app is running but doesn't know this extension's ID (an app older than a
+      // Web Store copy of the extension, say). Only updating the app fixes that.
+      pairRefused = resp.status === 403;
+      return "";
+    }
     const body = await resp.json();
     if (!body || typeof body.token !== "string" || !body.token) return "";
     await saveToken(body.token);
@@ -506,8 +512,12 @@ async function onCapture() {
   const token = document.getElementById("token").value.trim();
   if (!token) {
     render(
-      "Capsule isn't paired yet. Start it (`capsule serve`), reopen this popup, and it pairs " +
-        "by itself; or paste the token printed by `capsule serve` into the Token field."
+      pairRefused
+        ? "Capsule is running but doesn't recognize this copy of the extension, so it won't " +
+            "pair. Update the Capsule app by running its installer again (your archive is " +
+            "kept), then reopen this popup."
+        : "Capsule isn't paired yet. Reopen this popup and it pairs by itself; or paste the " +
+            "token printed by `capsule serve` into the Token field."
     );
     return;
   }
@@ -785,24 +795,189 @@ function versionAdvice(appVersion, extensionVersion) {
   );
 }
 
-async function checkVersions() {
-  try {
-    const resp = await fetch(BACKEND.replace(/\/capture$/, "/health"));
-    if (!resp.ok) return;
-    const body = await resp.json();
-    const advice = versionAdvice(body.version, chrome.runtime.getManifest().version);
-    const banner = document.getElementById("version-banner");
-    if (advice && banner) {
-      banner.textContent = advice;
-      banner.hidden = false;
-    }
-  } catch (_e) {
-    // backend not running: the capture path already says so
+function checkVersions(health) {
+  const advice = versionAdvice(health.version, chrome.runtime.getManifest().version);
+  const banner = document.getElementById("version-banner");
+  if (advice && banner) {
+    banner.textContent = advice;
+    banner.hidden = false;
   }
 }
 
+// -- v0.2.1: first run — the Capsule app isn't installed, or isn't running ----------------------
+// Most people add the extension (from the Web Store) before the app exists. Instead of a dead
+// popup, say what's missing, offer the double-click installer for this system, and switch to
+// the normal popup by itself once the app answers.
+
+const HEALTH_URL = BACKEND.replace(/\/capture$/, "/health");
+const REPO_URL = "https://github.com/mjlawless/capsule-genealogy";
+const INSTALL_DOCS_URL = REPO_URL + "#install-macos-or-windows";
+// Release assets built by installers/package-installers.sh: the names are a contract with it.
+const SETUP_DOWNLOADS = {
+  win: REPO_URL + "/releases/latest/download/Install-Capsule.cmd",
+  mac: REPO_URL + "/releases/latest/download/Install-Capsule-mac.zip",
+};
+// The README's one-line installs, for people who prefer a terminal (and the only way on Linux).
+const SETUP_COMMANDS = {
+  unix: "curl -LsSf https://raw.githubusercontent.com/mjlawless/capsule-genealogy/main/install.sh | sh",
+  win:
+    'powershell -ExecutionPolicy ByPass -c "irm ' +
+    'https://raw.githubusercontent.com/mjlawless/capsule-genealogy/main/install.ps1 | iex"',
+};
+// Set once this extension has reached the app: after that, no answer means "stopped", not
+// "never installed".
+const SEEN_APP_KEY = "capsuleSeenApp";
+
+// PURE (tested in node). What the first-run screen says, given chrome.runtime.getPlatformInfo()'s
+// `os` and whether this extension has ever reached the app.
+function setupScreen(os, seenApp) {
+  if (os !== "mac" && os !== "win" && os !== "linux") {
+    return {
+      title: "Capsule needs a computer",
+      body:
+        "Capsule saves pages into a free app on your own computer, and that app runs on " +
+        "Windows, macOS and Linux. It can't be installed on this device.",
+      download: "",
+      steps: "",
+      where: "",
+      command: "",
+    };
+  }
+  const download = SETUP_DOWNLOADS[os] || "";
+  const steps = {
+    win:
+      "Open the downloaded Install-Capsule.cmd. Windows may say it protected your PC, " +
+      "because the installer isn't signed yet: click More info, then Run anyway. A window " +
+      "shows the install, which takes a minute or two.",
+    mac:
+      "Open the downloaded Install-Capsule-mac.zip, then double-click Install Capsule. If " +
+      "macOS says it can't verify it (the installer isn't signed yet), click Done, open " +
+      "System Settings › Privacy & Security, scroll down, click Open Anyway and confirm. A " +
+      "Terminal window shows the install, which takes a minute or two.",
+    linux: "",
+  }[os];
+  const where = {
+    win: "Open PowerShell (Start menu › PowerShell), paste this and press Enter:",
+    mac: "Open Terminal (Applications › Utilities), paste this and press Return:",
+    linux: "Open a terminal, paste this and press Enter:",
+  }[os];
+  const command = os === "win" ? SETUP_COMMANDS.win : SETUP_COMMANDS.unix;
+  if (seenApp) {
+    return {
+      title: "Genealogy Capsule isn't running",
+      body:
+        "The Capsule app on this computer isn't answering. It starts by itself when you log " +
+        "in, so restarting your computer usually fixes this. Or run the installer again: it " +
+        "starts Capsule and keeps your archive.",
+      download,
+      steps,
+      where,
+      command,
+    };
+  }
+  return {
+    title: "One more step: install the Genealogy Capsule app",
+    body:
+      "This extension saves pages into Genealogy Capsule, a free app on your own computer, so " +
+      "your archive never leaves it. Install it once:",
+    download,
+    steps,
+    where,
+    command,
+  };
+}
+
+// The app's /health, or null when nothing answers. Capped, so a hung listener counts as "not
+// running" rather than a popup that never finishes opening.
+async function fetchHealth() {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 2500);
+  try {
+    const resp = await fetch(HEALTH_URL, { signal: ctrl.signal });
+    if (!resp.ok) return null;
+    const body = await resp.json();
+    return body && body.status === "ok" ? body : null;
+  } catch (_e) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function showSetup() {
+  const stored = await chrome.storage.local.get(SEEN_APP_KEY);
+  let os = "";
+  try {
+    os = (await chrome.runtime.getPlatformInfo()).os;
+  } catch (_e) {
+    // unknown platform: the screen says the app can't run here
+  }
+  const s = setupScreen(os, !!stored[SEEN_APP_KEY]);
+  const byId = (id) => document.getElementById(id);
+  byId("setup-title").textContent = s.title;
+  byId("setup-body").textContent = s.body;
+
+  const download = byId("setup-download");
+  download.parentElement.hidden = !s.download;
+  if (s.download) {
+    download.href = s.download;
+    download.textContent = "Download the Capsule installer";
+    // Download in place, so this popup stays open and can turn green when the app starts.
+    download.addEventListener("click", (event) => {
+      event.preventDefault();
+      chrome.downloads.download({ url: s.download }).catch(() => chrome.tabs.create({ url: s.download }));
+    });
+  }
+  byId("setup-steps").textContent = s.steps;
+  byId("setup-steps").hidden = !s.steps;
+
+  const box = byId("setup-command-box");
+  box.hidden = !s.command;
+  box.open = !!s.command && !s.download; // Linux: the command IS the installer
+  if (!s.download) byId("setup-command-summary").textContent = "Install with one command";
+  byId("setup-where").textContent = s.where;
+  byId("setup-command").textContent = s.command;
+  byId("setup-copy").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(s.command);
+      byId("setup-copy").textContent = "Copied ✓";
+    } catch (_e) {
+      byId("setup-copy").textContent = "Select the text above and copy it";
+    }
+  });
+  byId("setup-docs").href = INSTALL_DOCS_URL;
+  byId("setup-wait").hidden = !s.command;
+
+  byId("main").hidden = true;
+  byId("setup").hidden = false;
+  if (!s.command) return; // nothing to install here, so nothing to wait for
+
+  const watch = async () => {
+    const health = await fetchHealth();
+    if (!health) {
+      setTimeout(watch, 2000);
+      return;
+    }
+    byId("setup").hidden = true;
+    byId("main").hidden = false;
+    render("Capsule is running. You're ready to capture.");
+    startMain(health);
+  };
+  setTimeout(watch, 2000);
+}
+
 async function init() {
-  checkVersions();
+  const health = await fetchHealth();
+  if (!health) {
+    await showSetup();
+    return;
+  }
+  await startMain(health);
+}
+
+async function startMain(health) {
+  chrome.storage.local.set({ [SEEN_APP_KEY]: true });
+  checkVersions(health);
   loadToken().then((token) => {
     if (token) document.getElementById("token").value = token;
     refreshKeyStatus();

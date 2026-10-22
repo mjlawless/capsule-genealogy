@@ -21,6 +21,11 @@ const BACKEND = "http://127.0.0.1:8765/capture";
 const LEDGER_STARTED = "http://127.0.0.1:8765/ancestry/started";
 const LEDGER_FAILED = "http://127.0.0.1:8765/ancestry/failed";
 const TOKEN_KEY = "capsuleToken";
+// v0.2.1 — said wherever a capture can't reach or pair with the Capsule app. The popup is where
+// the fix is: it shows how to install or start the app, or says to update it.
+const NOT_CONNECTED =
+  "Capsule isn't connected. Click the Capsule icon in Chrome's toolbar: it shows how to " +
+  "install or start the Capsule app on this computer.";
 
 // Tell the ledger a capture BEGAN, before doing any of the work (BUG-005).
 //
@@ -227,12 +232,7 @@ async function fetchRemoteMedia(remote) {
 async function doCapture(msg, tabId) {
   const token = await loadToken();
   if (!token) {
-    return {
-      ok: false,
-      error:
-        "Capsule is not paired yet. Make sure `capsule serve` is running, then try again " +
-        "(or paste the token printed by `capsule serve` into the Capsule popup).",
-    };
+    return { ok: false, error: NOT_CONNECTED };
   }
 
   // IDENTITY GUARD (R5). Refuse before we render or POST anything. The backend checks
@@ -378,10 +378,7 @@ async function postAndShape(o) {
       },
       body: JSON.stringify(p),
     });
-  const unreachable = {
-    ok: false,
-    error: "Backend unreachable at " + BACKEND + " — is `capsule serve` running?",
-  };
+  const unreachable = { ok: false, error: NOT_CONNECTED };
 
   let resp;
   try {
@@ -555,12 +552,7 @@ async function driveViewerDownload(viewerTabId, apid) {
 async function captureAncestryImage(msg, tabId) {
   const token = await loadToken();
   if (!token) {
-    return {
-      ok: false,
-      error:
-        "Capsule is not paired yet. Make sure `capsule serve` is running, then try again " +
-        "(or paste the token printed by `capsule serve` into the Capsule popup).",
-    };
+    return { ok: false, error: NOT_CONNECTED };
   }
 
   // ORIGIN GUARD — before ANY work, including the ledger writes below. The identity guard

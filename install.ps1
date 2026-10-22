@@ -31,7 +31,7 @@ function Fail($message) {
     exit 1
 }
 
-Write-Host "Installing Capsule into $App"
+Write-Host "Installing Genealogy Capsule into $App"
 
 # 1. uv ---------------------------------------------------------------------------------------
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
@@ -311,7 +311,8 @@ Write-Host ''
 Write-Host "Capsule is running (http://127.0.0.1:$Port)." -ForegroundColor Green
 if ($loginItem) { Write-Host 'It will also start by itself whenever you log on.' }
 Write-Host ''
-Write-Host 'Last step, in Google Chrome:'
+Write-Host "Already added Capsule to Chrome (from the Chrome Web Store)? Then you're done: click its"
+Write-Host 'icon and it connects by itself. Otherwise, the last step, in Google Chrome:'
 Write-Host '  1. Open chrome://extensions and turn on Developer mode (top right).'
 Write-Host "  2. Click 'Load unpacked' and choose this folder:"
 Write-Host "       $App\extension"

@@ -430,7 +430,7 @@ def render_index(
         '<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
         '<meta name="generator" content="capsule captures-index/v2">\n'
-        "<title>Capsule — Captures Index</title>\n"
+        "<title>Genealogy Capsule — Captures Index</title>\n"
         # Swap the class before first paint so the enhanced layout never flashes
         # through its no-JS form. Everything else runs after the table exists.
         '<script>document.documentElement.className="js";</script>\n'
@@ -438,7 +438,7 @@ def render_index(
         "</head>\n"
         "<body>\n"
         "<header>\n"
-        "<h1>Capsule — Captures Index</h1>\n"
+        "<h1>Genealogy Capsule — Captures Index</h1>\n"
         f'<p class="meta">{count} {noun} · generated {_iso_z(generated_at)} · '
         "generated file, do not edit by hand · spec <code>captures-index/v2</code></p>\n"
         f"{controls}\n"

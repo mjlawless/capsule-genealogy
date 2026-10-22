@@ -58,7 +58,7 @@ from capsule.pipeline.supersede import (
 )
 from capsule.store.repository import Repository
 
-app = typer.Typer(help="Capsule — evidence-grade genealogy capture.", no_args_is_help=True)
+app = typer.Typer(help="Genealogy Capsule — evidence-grade genealogy capture.", no_args_is_help=True)
 
 _AGENT_NAME = "extractor"
 
@@ -273,7 +273,7 @@ def setup(
     computer's own password store (Keychain on macOS, Credential Manager on Windows), so you
     never have to type it again. Nothing is sent anywhere else.
     """
-    typer.secho("Capsule setup", bold=True)
+    typer.secho("Genealogy Capsule setup", bold=True)
     typer.echo(f"  Your archive lives in: {data_dir().resolve()}")
 
     source = "environment" if os.environ.get("ANTHROPIC_API_KEY") else None

@@ -60,7 +60,8 @@ def test_an_unreadable_version_says_nothing(bad):
 
 def test_the_popup_checks_on_open():
     source = _POPUP.read_text(encoding="utf-8")
-    init = source[source.index("async function init()"):]
-    assert init.index("checkVersions();") < init.index("loadToken()")
+    # v0.2.1: the popup first checks the app answers (else the first-run screen), then compares.
+    start = source[source.index("async function startMain("):]
+    assert start.index("checkVersions(health);") < start.index("loadToken()")
     html = (_POPUP.parent / "popup.html").read_text(encoding="utf-8")
     assert 'id="version-banner"' in html

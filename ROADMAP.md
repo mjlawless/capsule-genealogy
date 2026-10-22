@@ -1,4 +1,4 @@
-# Capsule roadmap
+# Genealogy Capsule roadmap
 
 Where Capsule is heading, in rough order. Nothing here has a promised date. Items that cost
 money (store fees, code signing) are marked **needs budget** and happen only when that is

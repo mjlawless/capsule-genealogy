@@ -84,7 +84,13 @@ The private repo stays the development repo. For the next release:
    tracked contents with a fresh `release/export-public.sh <empty dir>` tree (copy over, keep
    `.git`), so the public history grows one commit per release rather than restarting.
 3. Commit as the GitHub noreply address, tag `vX.Y.Z`, push, `gh release create` with the
-   extension zip.
+   extension zip **and the double-click installers** (since 0.2.1; the popup's first-run screen
+   and the README link to them as `releases/latest/download/<name>`, so every release must
+   carry them):
+   `installers/package-installers.sh <dir>` builds `Install-Capsule.cmd` and
+   `Install-Capsule-mac.zip`; attach both. Then check both links answer 200:
+   `curl -fsSIL https://github.com/mjlawless/capsule-genealogy/releases/latest/download/Install-Capsule.cmd`
+   (and the same for `Install-Capsule-mac.zip`).
 4. Follow-up owed: make the Windows CI job blocking (drop `continue-on-error`), since it passed.
 
 

@@ -1,4 +1,4 @@
-# Contributing to Capsule
+# Contributing to Genealogy Capsule
 
 Thanks for helping. Capsule is a small, opinionated tool: its value is that the evidence it
 keeps can be trusted years later. Contributions are welcome when they keep that true.

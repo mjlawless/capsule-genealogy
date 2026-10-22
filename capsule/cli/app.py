@@ -304,6 +304,12 @@ def setup(
         typer.echo("  Key saved in your keyring.")
 
     token, token_source = resolve_token()
+    # The installers end with their own, correct next steps (Capsule already running, the
+    # extension folder or the Web Store). This block, written for a by-hand setup, said to run
+    # `capsule serve` and showed a token mid-install, contradicting them (v0.2.1). An environment
+    # variable rather than an option, so an installer never breaks an older release's setup.
+    if os.environ.get("CAPSULE_INSTALLER") == "1":
+        return
     typer.echo("")
     typer.secho("Next:", bold=True)
     typer.echo("  1. Start Capsule:            capsule serve   (leave it running)")

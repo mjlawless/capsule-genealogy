@@ -5,7 +5,7 @@ computer that turn the record page you are looking at into an archived, cited, h
 that you keep: the page, the record image, what the record says, and an Evidence Explained
 citation.
 
-> **Status: v0.2.1, early access.** Capsule has been used daily on real research (hundreds
+> **Status: v0.2.2, early access.** Capsule has been used daily on real research (hundreds
 > of captures from Irish parish registers, NYC vital records, Ancestry, Archion, Riksarkivet,
 > Newspapers.com and more). Installing it takes one command and a few clicks in Chrome. You can
 > try it **without an AI key**; add one later to have records read. A Chrome Web Store listing

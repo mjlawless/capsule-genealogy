@@ -107,10 +107,20 @@ function Stop-Capsule {
         # The logon task is shared by name; it is only ever stopped or replaced if it runs THIS
         # installation. Another one's (a developer checkout, say) keeps its archive elsewhere,
         # and taking its task over would quietly switch archives (Codex review).
-        if ((($task.Actions | ForEach-Object { $_.Arguments }) -join ' ').Contains($App + '\')) {
+        $taskArgs = ($task.Actions | ForEach-Object { $_.Arguments }) -join ' '
+        $taskScript = if ($taskArgs -match '-File\s+"([^"]+)"') { $Matches[1] } else { $null }
+        if ($taskArgs.Contains($App + '\')) {
             Stop-ScheduledTask -TaskName 'Capsule Backend' -ErrorAction SilentlyContinue
+        } elseif ($taskScript -and -not (Test-Path -LiteralPath $taskScript)) {
+            # Left behind by a copy that has since been deleted: it can start nothing and guards
+            # no archive, so it is simply replaced (found on a real upgrade, v0.2.1).
+            Unregister-ScheduledTask -TaskName 'Capsule Backend' -Confirm:$false
+            Write-Host "Removed an old start-at-logon task left by a Capsule copy that no longer exists."
         } else {
-            Fail "another Capsule installation is set to start at logon (the 'Capsule Backend' task). Remove it first (its scripts\capsule-autostart.ps1 uninstall), or install into the same folder."
+            $other = if ($taskScript) { Split-Path -Parent (Split-Path -Parent $taskScript) } else { '(unknown folder)' }
+            Fail ("another copy of Capsule, in $other, is set to start at logon, and it keeps its own archive. " +
+                "To switch to this installation, retire it first by running this in PowerShell, then run the installer again:`n" +
+                "  powershell -NoProfile -ExecutionPolicy Bypass -File `"$other\scripts\capsule-autostart.ps1`" uninstall")
         }
     }
     # Only Capsule's own server and launcher, and only this installation's ("$App\" with its
@@ -280,9 +290,11 @@ try {
     # setup reads the same .env and archive and shows the token the backend will use.
     Push-Location $App
     try {
+        $env:CAPSULE_INSTALLER = '1'
         & $uv run --project $App capsule setup --no-key
         if ($LASTEXITCODE -ne 0) { throw 'capsule setup did not finish' }
     } finally {
+        Remove-Item Env:CAPSULE_INSTALLER -ErrorAction SilentlyContinue
         Pop-Location
     }
 

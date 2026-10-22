@@ -67,6 +67,21 @@ jobs:
           # Git's bash by full path: a bare `bash` can resolve to WSL's.
           & "$env:ProgramFiles\Git\bin\bash.exe" scripts/ci-install-smoke.sh
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      # The real user path on Windows, which CI never ran before v0.2.1 failed on it: install
+      # again (an upgrade over the step above) WITH the logon task. The task runs Capsule
+      # independently of this step, so the check can follow in the same step or later.
+      - name: Upgrade with the logon task (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          CAPSULE_INSTALL_SOURCE: ${{ github.workspace }}
+          CAPSULE_HOME: ${{ runner.temp }}\Capsule Test
+        run: |
+          ./install.ps1
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Get-ScheduledTask -TaskName 'Capsule Backend' | Format-List TaskName,State
+          & "$env:ProgramFiles\Git\bin\bash.exe" scripts/ci-install-smoke.sh
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Server logs (on failure)
         if: failure()
         shell: bash

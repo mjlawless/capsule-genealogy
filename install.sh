@@ -134,10 +134,18 @@ ROLLING_BACK=""
 stop_capsule() {
   if [ "$(uname -s)" = "Darwin" ] && [ -f "$PLIST" ]; then
     # The login item is shared by name; only unload it if it runs THIS installation.
-    case "$(plutil -extract ProgramArguments.3 raw -o - "$PLIST" 2>/dev/null)" in
-      "$APP") launchctl bootout "gui/$(id -u)/$LABEL" >/dev/null 2>&1 && STOPPED=1 || true ;;
-      *) fail "another Capsule installation is set to start at login ($PLIST). Uninstall it first, or install into the same folder." ;;
-    esac
+    other="$(plutil -extract ProgramArguments.3 raw -o - "$PLIST" 2>/dev/null)"
+    if [ "$other" = "$APP" ]; then
+      launchctl bootout "gui/$(id -u)/$LABEL" >/dev/null 2>&1 && STOPPED=1 || true
+    elif [ -n "$other" ] && [ ! -e "$other" ]; then
+      # Left behind by a copy that has since been deleted: it can start nothing and guards no
+      # archive, so it is simply replaced (found on a real Windows upgrade, v0.2.1).
+      launchctl bootout "gui/$(id -u)/$LABEL" >/dev/null 2>&1 || true
+      rm -f "$PLIST"
+      say "Removed an old login item left by a Capsule copy that no longer exists."
+    else
+      fail "another copy of Capsule, in ${other:-an unknown folder}, is set to start at login ($PLIST), and it keeps its own archive. To switch to this installation, remove that login item first (launchctl bootout gui/$(id -u)/$LABEL; rm \"$PLIST\"), then run the installer again."
+    fi
   fi
   for pid in $(listeners); do
     cmd="$(ps -o command= -p "$pid" 2>/dev/null)"
@@ -293,7 +301,7 @@ say "Preparing Capsule (first time: a minute or two)..."
 # 3. setup --------------------------------------------------------------------------------
 # From the folder the backend starts in, so setup reads the same .env and archive and shows
 # the token the running backend will actually use (Codex review).
-(cd "$HOME_DIR" && "$UV" run --project "$APP" capsule setup --no-key) || rollback "capsule setup did not finish"
+(cd "$HOME_DIR" && CAPSULE_INSTALLER=1 "$UV" run --project "$APP" capsule setup --no-key) || rollback "capsule setup did not finish"
 
 # 4. start it -----------------------------------------------------------------------------
 start_capsule

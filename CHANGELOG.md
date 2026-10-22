@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.2 — Windows install fixes
+
+Found on the first real Windows install of 0.2.1:
+
+- **The Windows installer no longer fails while setting Capsule to start at logon** ("Cannot
+  find path …\app\.env"). A leftover check for an API key in a settings file broke every
+  first install that set up the logon task. Capsule doesn't need a key to run.
+- **A start-at-login item left by a deleted copy of Capsule is replaced** instead of stopping
+  the install. If another copy really exists, the message now says where it is and gives the
+  exact command to retire it.
+- The install window no longer shows setup's by-hand "run `capsule serve`" steps and pairing
+  token partway through, which contradicted the installer's own ending.
+- CI now runs the Windows upgrade with the logon task, the path that failed.
+
 ## 0.2.1 — no terminal needed
 
 - **New name: Genealogy Capsule.** The extension, popup, collection page, installers and docs

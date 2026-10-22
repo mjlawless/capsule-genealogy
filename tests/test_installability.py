@@ -219,6 +219,50 @@ def test_setup_no_key_never_prompts(elsewhere, fake_keyring, monkeypatch):
     assert fake_keyring.saved is None
 
 
+def test_setup_run_by_an_installer_leaves_the_next_steps_to_it(elsewhere, fake_keyring, monkeypatch):
+    """v0.2.1 live install: setup's by-hand "Next: run capsule serve … paste this token" block
+    printed mid-install, contradicting the installer's own ending. The token is still minted."""
+    monkeypatch.setenv("CAPSULE_INSTALLER", "1")
+    result = _setup(["--no-key"], "", monkeypatch)
+    assert result.exit_code == 0, result.output
+    assert "Next:" not in result.output and "capsule serve" not in result.output
+    _, user_dir = elsewhere
+    token = (user_dir / ".capsule-token").read_text().strip()
+    assert token and token not in result.output
+
+
+def test_installers_tell_setup_they_are_running_it():
+    root = Path(__file__).resolve().parent.parent
+    assert "CAPSULE_INSTALLER=1 \"$UV\" run --project \"$APP\" capsule setup --no-key" in (
+        root / "install.sh"
+    ).read_text(encoding="utf-8")
+    ps1 = (root / "install.ps1").read_text(encoding="utf-8")
+    assert "$env:CAPSULE_INSTALLER = '1'" in ps1 and "Remove-Item Env:CAPSULE_INSTALLER" in ps1
+
+
+def test_windows_login_task_registration_needs_no_env_file():
+    """v0.2.1 live install on Windows: the autostart helper's old API-key check ran
+    Select-String on app\\.env, which a fresh install doesn't have; under ErrorAction Stop that
+    threw ("Cannot find path …\\app\\.env") and failed the whole install."""
+    root = Path(__file__).resolve().parent.parent
+    autostart = (root / "scripts" / "capsule-autostart.ps1").read_text(encoding="utf-8")
+    install = autostart.split("'install' {", 1)[1].split("'uninstall'", 1)[0]
+    code = "\n".join(line for line in install.splitlines() if not line.lstrip().startswith("#"))
+    assert "Select-String" not in code and ".env" not in code and "ANTHROPIC_API_KEY" not in code
+
+
+def test_a_login_item_left_by_a_deleted_copy_is_replaced_not_refused():
+    """v0.2.1 live install on Windows: a developer copy had been deleted but its logon task
+    remained, and the installer refused as if another installation guarded an archive."""
+    root = Path(__file__).resolve().parent.parent
+    ps1 = (root / "install.ps1").read_text(encoding="utf-8")
+    assert "-not (Test-Path -LiteralPath $taskScript)" in ps1
+    assert "Unregister-ScheduledTask -TaskName 'Capsule Backend' -Confirm:$false" in ps1
+    assert "-ExecutionPolicy Bypass -File" in ps1  # the refusal gives a command that runs
+    sh = (root / "install.sh").read_text(encoding="utf-8")
+    assert '[ -n "$other" ] && [ ! -e "$other" ]' in sh
+
+
 def test_found_dotenv_paths_are_read_literally(tmp_path, monkeypatch):
     """Codex review: the installer writes CAPSULE_DATA_DIR to .env single-quoted and escaped;
     the CLI must read it back exactly: no comment-stripping at ` #`, no `${...}` expansion."""

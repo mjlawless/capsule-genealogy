@@ -114,10 +114,11 @@ switch ($Action) {
     'install' {
         $uv = (Get-Command uv -ErrorAction SilentlyContinue).Source
         if (-not $uv) { throw 'uv was not found on PATH; install it first (https://docs.astral.sh/uv/)' }
-        $envFile = Join-Path $repo '.env'
-        if (-not $env:ANTHROPIC_API_KEY -and -not (Select-String -Path $envFile -Pattern '^\s*ANTHROPIC_API_KEY\s*=' -Quiet -ErrorAction SilentlyContinue)) {
-            Write-Warning "no ANTHROPIC_API_KEY in $envFile; captures will fail until you add it"
-        }
+        # No API-key check here (v0.2.1): Capsule runs without a key (captures are archived and
+        # read later), and the key lives in the OS credential store, not .env. The old check
+        # also failed the whole first install: Select-String on a missing .env threw under
+        # $ErrorActionPreference = 'Stop' despite -ErrorAction SilentlyContinue, and a fresh
+        # install has no .env.
 
         $psArgs = '-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File "{0}" -Uv "{1}"' -f $launcher, $uv
         $taskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $psArgs -WorkingDirectory $repo

@@ -315,9 +315,13 @@ def test_on_windows_a_path_too_long_is_refused_before_anything_is_written(tmp_pa
     names = _archive(mac, 1, "a")
     (mac / "captures" / names[0] / ("x" * 240 + ".json")).write_text("{}", encoding="utf-8")
     monkeypatch.setattr(transfer, "_ON_WINDOWS", True)
+    monkeypatch.setattr(transfer, "_LONG_PATHS", False)
     with pytest.raises(TransferError, match="too long for Windows"):
         _import(mac, win)
     assert not _names(win)
+
+    monkeypatch.setattr(transfer, "_LONG_PATHS", True)  # a Windows with long paths enabled
+    assert _import(mac, win).added_folders == 1
 
 
 def test_a_second_import_waits_its_turn(tmp_path):

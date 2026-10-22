@@ -63,7 +63,7 @@ grabPage(true, false, %d, 1000).then((p) => console.log(JSON.stringify(p)));
 """
         % (json.dumps(page), max_items)
     )
-    proc = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=30)
+    proc = subprocess.run(["node", "-e", script], capture_output=True, text=True, encoding="utf-8", timeout=30)
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout)
 

@@ -32,7 +32,7 @@ def _toast(res: dict) -> dict:
         + f"toastFromResult({json.dumps(res)});"
         "console.log(JSON.stringify({ ...shown, prompted }));"
     )
-    proc = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=30)
+    proc = subprocess.run(["node", "-e", script], capture_output=True, text=True, encoding="utf-8", timeout=30)
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout)
 

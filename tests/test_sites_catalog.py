@@ -109,7 +109,7 @@ def test_every_download_profile_in_the_extension_has_an_entry():
         "const out = {}; for (const [k, re] of Object.entries(ctx.__S)) out[k] = re.source;"
         "console.log(JSON.stringify(out));"
     )
-    proc = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=30)
+    proc = subprocess.run(["node", "-e", script], capture_output=True, text=True, encoding="utf-8", timeout=30)
     assert proc.returncode == 0, proc.stderr
     profiles = json.loads(proc.stdout)
     assert set(profiles) == {s.id for s in SITES if s.arm_download}

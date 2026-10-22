@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.4 — records read by Claude Opus 5.5
+
+- **Records are now read by Claude Opus 5.5** (was Opus 4.8), chosen by testing on 31 real
+  record pages across six sites. It left out the fewest facts of the newer models, quoted
+  every value word for word, and works out a birth year from an age at death, marking it
+  "calculated" rather than "stated". It costs about the same per page.
+- Long pages, such as a search with many results, no longer risk running out of room.
+- The extraction eval reports derived facts (calculated or estimated) for review instead of
+  counting them as errors; facts the page states are still checked exactly.
+- The Windows test run passes again (two test-only fixes).
+
 ## 0.2.3 — move your archive between computers, and fixes from a test pass
 
 - **Move your archive to another computer.** `capsule export archive.zip` packages the whole

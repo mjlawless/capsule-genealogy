@@ -103,7 +103,7 @@ def _refused_advice(extension_id: str) -> str:
     start = source.index("function pairRefusedAdvice(")
     fn = source[start : source.index("\n}\n", start) + 3]
     script = ids + "\n" + fn + f"\nconsole.log(JSON.stringify(pairRefusedAdvice({json.dumps(extension_id)})));"
-    proc = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=30)
+    proc = subprocess.run(["node", "-e", script], capture_output=True, text=True, encoding="utf-8", timeout=30)
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout)
 

@@ -293,6 +293,55 @@ def test_score_actual_duplicate_field_is_flagged_not_collapsed():
     assert any(d.kind == "duplicate" and d.key == "Mary Kelly::name" for d in report.diffs)
 
 
+def _with(*assertions: dict) -> dict:
+    out = json.loads(json.dumps(_GOLD))
+    out["assertions"] += [
+        {"persona": "Mary Kelly", "snippet": "Age: 46", **a} for a in assertions
+    ]
+    return out
+
+
+def test_a_derived_fact_the_gold_does_not_pin_is_reported_not_failed():
+    """Opus 5.5 works out a birth year from the age and labels it calculated (2026-10-22)."""
+    actual = _with({"field": "birth_year", "value": "1834 or 1835", "evidence_type": "calculated"})
+    report = score("f", _raw(_GOLD), _raw(actual))
+    assert report.ok
+    assert [(d.key, d.actual_value) for d in report.derived] == [("Mary Kelly::birth_year", "1834 or 1835")]
+    assert "DERIVED" in report.summary()
+
+
+def test_a_derived_fact_under_a_stated_label_is_not_a_duplicate():
+    """The model may file the derived birth year under the record's own label, "Age"."""
+    gold = _with({"field": "age", "value": "46", "evidence_type": "stated"})
+    actual = _with(
+        {"field": "age", "value": "46", "evidence_type": "stated"},
+        {"field": "Age", "value": "born about 1834", "evidence_type": "calculated"},
+    )
+    report = score("f", _raw(gold), _raw(actual))
+    assert report.ok and report.duplicated == 0 and len(report.derived) == 1
+
+
+def test_a_stated_fact_downgraded_to_derived_still_fails():
+    actual = json.loads(json.dumps(_GOLD))
+    actual["assertions"][1]["evidence_type"] = "estimated"
+    report = score("f", _raw(_GOLD), _raw(actual))
+    assert not report.ok and report.mismatched == 1 and not report.derived
+
+
+def test_a_derived_fact_about_an_undeclared_person_still_fails():
+    """Capsule's build rejects a fact about a person the reply never declared."""
+    actual = json.loads(json.dumps(_GOLD))
+    actual["assertions"].append({"persona": "Nobody Declared", "field": "birth_year",
+                                 "value": "1834", "evidence_type": "calculated", "snippet": "Age: 46"})
+    report = score("f", _raw(_GOLD), _raw(actual))
+    assert not report.ok and not report.derived
+
+
+def test_a_stated_extra_fact_still_fails():
+    actual = _with({"field": "age", "value": "46", "evidence_type": "stated"})
+    assert not score("f", _raw(_GOLD), _raw(actual)).ok
+
+
 def test_score_raises_on_duplicate_gold_key():
     """Duplicate persona::field in the GOLD is a fixture authoring bug, not a pass."""
     bad_gold = json.loads(json.dumps(_GOLD))

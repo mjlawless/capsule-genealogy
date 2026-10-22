@@ -31,8 +31,14 @@ _logger = logging.getLogger(__name__)
 # satisfy the manifest's agent-log allow-list (lowercase, digits, _-).
 _AGENT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 
-DEFAULT_MODEL = "claude-opus-4-8"
-DEFAULT_MAX_TOKENS = 16000
+# Chosen by measurement, not by name (2026-10-22): on 31 of the owner's pages Opus 5.5 left
+# out the fewest facts, quoted every value word for word, labelled derived birth years
+# "calculated", and cost the same as Opus 4.8 before it. Change it the same way: run the
+# comparison, review the differences, then switch in a release.
+DEFAULT_MODEL = "claude-opus-5-5"
+# The model's reasoning counts toward this. A 30-result search page needed 14,008 tokens;
+# 21,000 leaves room for longer ones and stays under the SDK's non-streaming limit (~21,333).
+DEFAULT_MAX_TOKENS = 21000
 
 
 class TransportResult(BaseModel):

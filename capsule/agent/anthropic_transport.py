@@ -7,7 +7,7 @@ adapter is unit-tested offline against a stub (no network, no API key); in
 production a real `anthropic.Anthropic()` is constructed lazily on first use.
 
 Note: sampling params (`temperature`/`top_p`/`top_k`) are intentionally never
-sent — Claude Opus 4.8 rejects them with a 400. Behavior is steered by the
+sent — Claude Opus models since 4.8 reject them with a 400. Behavior is steered by the
 prompt/system instead.
 
 `effort` (optional) sends adaptive thinking at that effort level. Unset, the request

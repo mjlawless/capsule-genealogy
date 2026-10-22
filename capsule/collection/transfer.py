@@ -74,6 +74,26 @@ _PART_SUFFIX = ".capsule-importing"
 _ON_WINDOWS = os.name == "nt"
 
 
+def _windows_long_paths() -> bool:
+    """Has this Windows lifted the 260-character limit? Python honours the setting, so
+    the length check would refuse paths that store fine (it failed CI, whose temporary
+    folders are deep)."""
+    if os.name != "nt":
+        return False
+    try:
+        import winreg
+
+        with winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\FileSystem"
+        ) as key:
+            return winreg.QueryValueEx(key, "LongPathsEnabled")[0] == 1
+    except OSError:
+        return False
+
+
+_LONG_PATHS = _windows_long_paths()
+
+
 class TransferError(Exception):
     """The archive cannot be exported or imported; nothing was changed."""
 
@@ -384,7 +404,7 @@ def _windows_problems(folder: Folder, target_root: Path) -> list[str]:
                 problems.append(f"{folder.relative}/{rel.as_posix()}: a name Windows refuses")
         final = target_root / folder.relative / rel
         # The staging name (".importing-xxxxxxxx-a-") is the longer of its two paths.
-        if len(str(final)) + 22 > _MAX_PATH:
+        if not _LONG_PATHS and len(str(final)) + 22 > _MAX_PATH:
             problems.append(f"{folder.relative}/{rel.as_posix()}: path too long for Windows")
     return problems
 
@@ -506,7 +526,7 @@ def _plan(src_db: Path, src_captures: Path, db_path: Path, captures_root: Path) 
                 dest = mine.path / rel
                 if not dest.exists():
                     plan.new_files.append((file, dest, mine.path))
-                    if _ON_WINDOWS and len(str(dest)) > _MAX_PATH:
+                    if _ON_WINDOWS and not _LONG_PATHS and len(str(dest)) > _MAX_PATH:
                         plan.problems.append(f"{dest}: path too long for Windows")
     return plan
 

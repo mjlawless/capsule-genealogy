@@ -144,6 +144,11 @@ class EvalReport:
     diffs: tuple[FieldDiff, ...]
     values_missing: tuple[str, ...] = ()  # "<persona>::<value>" gold values absent
     values_total: int = 0  # distinct (persona, value) pairs in the gold
+    # Calculated/estimated facts the gold does not pin (a birth year worked out from an age).
+    # Reported for a person to check, never a failure: gold pins what the page STATES, and
+    # Opus 5.5 derives facts the page implies, labelled as derived, as the evidence model
+    # intends (2026-10-22 model test). Its key may repeat a stated field ("Age").
+    derived: tuple[FieldDiff, ...] = ()
 
     @property
     def record_type_ok(self) -> bool:
@@ -228,6 +233,9 @@ class EvalReport:
                 lines.append(f"  DUPLICATE  {diff.key}: model emitted this field more than once")
             else:  # mismatched
                 lines.append(f"  MISMATCH   {diff.key}: expected {exp}, got {act}")
+        for diff in self.derived:
+            act = _repr_side(diff.actual_value, diff.actual_type)
+            lines.append(f"  DERIVED    {diff.key}: got {act} (not in the gold; check it)")
         return "\n".join(lines)
 
 
@@ -327,7 +335,27 @@ def score(name: str, expected: RawExtraction, actual: RawExtraction) -> EvalRepo
             f"gold fixture {name!r} has duplicate persona::field keys: {sorted(set(exp_adup))}"
         )
 
-    act_map, act_adup = _index_assertions(actual.assertions, act_resolve)
+    # A derived fact is set aside for review (see EvalReport.derived) when the gold does not
+    # pin that field at all, or when it rides beside a STATED fact of the same field (a birth
+    # year worked out from "Age"). A derived fact standing in for a field the gold states is
+    # NOT set aside: a stated fact downgraded to "calculated" is evidence-type drift.
+    exp_keys = {_assertion_key(exp_resolve(a), a.field) for a in expected.assertions}
+    stated_keys = {
+        _assertion_key(act_resolve(a), a.field)
+        for a in actual.assertions
+        if a.evidence_type.value == "stated"
+    }
+    scored, derived = [], []
+    for a in actual.assertions:
+        key = _assertion_key(act_resolve(a), a.field)
+        # Only about a person the reply declares: a dangling reference fails the capture
+        # build, so it must stay scored and fail here too (Codex review).
+        known = act_resolve(a) in act_slot_role
+        if a.evidence_type.value != "stated" and known and (key not in exp_keys or key in stated_keys):
+            derived.append(FieldDiff(key, "derived", None, None, a.value, a.evidence_type.value))
+        else:
+            scored.append(a)
+    act_map, act_adup = _index_assertions(scored, act_resolve)
 
     exp_slots, act_slots = set(exp_slot_role), set(act_slot_role)
     personas_missing = tuple(sorted(exp_slots - act_slots))
@@ -375,6 +403,7 @@ def score(name: str, expected: RawExtraction, actual: RawExtraction) -> EvalRepo
         diffs=tuple(diffs),
         values_missing=values_missing,
         values_total=len(exp_values),
+        derived=tuple(derived),
     )
 
 

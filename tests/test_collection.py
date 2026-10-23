@@ -303,7 +303,7 @@ def test_read_is_tolerant_of_missing_extraction_and_citation(tmp_path):
     assert record.short_note is None
     # And it renders without error, showing the no-assertions note.
     html = render_index([record], generated_at=_DT)
-    assert "No structured assertions extracted yet" in html
+    assert "No facts were read from this page." in html
 
 
 def test_local_link_targets_the_real_folder_not_the_manifest_capture_id(tmp_path):
@@ -360,8 +360,9 @@ def test_status_is_extracted_when_assertions_exist_else_captured(tmp_path):
     assert without.status == "captured"
 
 
-def test_later_lifecycle_stages_render_as_pending(tmp_path):
-    """reviewed/matched/attached and OCR'd have no M0 data source yet."""
+def test_only_lifecycle_stages_with_data_are_shown(tmp_path):
+    """Reviewed (correction log) and Transcribed (REQ-006) have data; matched and attached
+    have none yet, so they are not shown (owner, 2026-10-23: placeholders confused)."""
     _make_capture(
         tmp_path,
         source_id="018f0000aaaa",
@@ -372,9 +373,10 @@ def test_later_lifecycle_stages_render_as_pending(tmp_path):
         fields=[("name", "Mary Doyle")],
     )
     html = write_index(tmp_path, now=lambda: _DT).read_text(encoding="utf-8")
-    for label in ("Reviewed", "Matched", "Attached", "OCR"):
+    for label in ("<dt>Reviewed</dt><dd>—</dd>", "<dt>Transcribed</dt><dd>—</dd>"):
         assert label in html
-    assert "—" in html
+    for gone in ("Matched", "Attached", "OCR'd"):
+        assert f"<dt>{gone}</dt>" not in html
 
 
 # --------------------------------------------------------------------------
@@ -399,7 +401,9 @@ def test_write_index_renders_a_row_and_detail_with_links(tmp_path):
     assert html.startswith("<!doctype html>")
     assert "<table" in html
     # One <tbody> per capture, carrying the filter/sort keys as data-*.
-    assert 'data-type="death"' in html
+    # Filed under its common category; the reader's exact type is in the detail.
+    assert 'data-type="Death &amp; burial"' in html
+    assert "<dt>Record type</dt><dd>death (Death &amp; burial)</dd>" in html
     assert 'data-site="example"' in html
     assert 'data-status="extracted"' in html
     # Bibliographic reference, source link, local folder link.
@@ -961,7 +965,7 @@ def test_the_models_note_reaches_the_index_instead_of_a_generic_sentence(tmp_pat
     html = render_index([record], generated_at=_DT)
     assert note in html
     assert "Extractor:" in html  # attributed — never mistaken for the researcher's note
-    assert "awaiting OCR" not in html  # the generic guess is gone when we have a reason
+    assert "No facts were read" not in html  # the generic sentence yields to a reason
 
 
 def test_a_capture_with_no_model_note_keeps_the_generic_sentence(tmp_path):
@@ -971,7 +975,7 @@ def test_a_capture_with_no_model_note_keeps_the_generic_sentence(tmp_path):
     record = read_capture_record(folder)
 
     assert record.extraction_notes is None
-    assert "awaiting OCR" in render_index([record], generated_at=_DT)
+    assert "No facts were read from this page." in render_index([record], generated_at=_DT)
 
 
 def test_the_models_note_is_escaped(tmp_path):

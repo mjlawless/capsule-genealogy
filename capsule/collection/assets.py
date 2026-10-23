@@ -41,6 +41,18 @@ h1{font-size:1.05rem;margin:0}
 input,select{font:inherit;padding:.35rem .5rem;border:1px solid var(--line);
   border-radius:6px;background:var(--panel);color:var(--fg)}
 input{flex:1 1 18rem;min-width:11rem}
+.ms{position:relative}
+.ms>summary{list-style:none;cursor:pointer;padding:.35rem .5rem;border:1px solid var(--line);
+  border-radius:6px;background:var(--panel);white-space:nowrap}
+.ms>summary::-webkit-details-marker{display:none}
+.ms>summary::after{content:" ▾";color:var(--muted)}
+.ms-list{position:absolute;z-index:6;margin-top:.25rem;min-width:14rem;max-height:20rem;
+  overflow:auto;padding:.4rem .5rem;border:1px solid var(--line);border-radius:6px;
+  background:var(--panel);box-shadow:0 6px 18px rgba(0,0,0,.15)}
+.ms-list label{display:block;white-space:nowrap;font-size:.82rem;padding:.12rem 0;cursor:pointer}
+.ms-list input{flex:none;min-width:0;margin:0 .3rem 0 0;padding:0}
+.ms-clear{margin-top:.35rem;font:inherit;font-size:.75rem;color:var(--accent);
+  background:transparent;border:0;padding:0;cursor:pointer}
 .count{color:var(--muted);font-size:.78rem;margin-left:auto}
 
 .wrap{display:grid;grid-template-columns:minmax(0,1fr);gap:1.25rem;
@@ -71,6 +83,25 @@ tbody[hidden]{display:none}
 .pill{display:inline-block;border-radius:999px;padding:.05rem .5rem;
   font-size:.7rem;font-weight:600;background:var(--chip);color:var(--muted)}
 .pill.s-extracted{background:var(--accent-bg);color:var(--accent)}
+.pill.s-reviewed{background:var(--accent);color:var(--bg)}
+.chip.incomplete{background:rgba(214,69,69,.15);color:#d64545}
+.help-link{font-size:.75rem;font-weight:600;margin-left:.6rem;vertical-align:middle}
+.d-cite{margin-top:.9rem}
+.cite{font-size:.8rem;margin:.3rem 0}
+.cite-label{display:block;font-size:.68rem;color:var(--muted);text-transform:uppercase}
+.cite-text{user-select:all}
+.copy,.copy-ai{font:inherit;font-size:.72rem;color:var(--accent);cursor:pointer;margin-left:.4rem;
+  padding:.1rem .45rem;border:1px solid var(--line);border-radius:5px;background:transparent}
+.copy-ai{margin-left:0;font-weight:600}
+.copy:hover,.copy-ai:hover,.copy:focus-visible,.copy-ai:focus-visible{border-color:var(--accent);outline:none}
+.reveal{font:inherit;font-size:.72rem;color:var(--accent);cursor:pointer;margin-left:.4rem;
+  padding:.1rem .45rem;border:1px solid var(--line);border-radius:5px;background:transparent}
+.reveal:hover,.reveal:focus-visible{border-color:var(--accent);outline:none}
+.assertions .tag{display:inline-block;margin-left:.35rem;padding:0 .35rem;border-radius:4px;
+  font-size:.66rem;font-weight:600;background:var(--accent-bg);color:var(--accent);cursor:help}
+.capsule-fix-history{margin:.6rem 0 0;font-size:.75rem;color:var(--muted)}
+.capsule-fix-history ol{margin:.2rem 0 0;padding-left:1.2rem;max-height:9rem;overflow:auto}
+.assertions tr.retracted td{color:var(--muted)}
 .chip{display:inline-block;background:var(--chip);color:var(--muted);
   border-radius:4px;padding:.05rem .35rem;font-size:.7rem;margin-right:.2rem}
 .refchip{background:var(--accent-bg);color:var(--accent)}
@@ -124,6 +155,23 @@ aside:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   color:var(--muted);border-radius:6px;vertical-align:middle}
 .trash:hover,.trash:focus-visible{color:#d64545;background:rgba(214,69,69,.15);outline:none}
 /* Add-a-note button — below the notes, interactive-only. */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.assertions td.fixes{white-space:nowrap;text-align:right;width:1%}
+.fix{border:0;background:transparent;color:var(--muted);cursor:pointer;font:inherit;
+  font-size:.85rem;line-height:1;padding:.15rem .3rem;border-radius:5px}
+.fix:hover,.fix:focus-visible{color:var(--accent);background:var(--accent-bg);outline:none}
+.fix-retract:hover,.fix-retract:focus-visible{color:#d64545;background:rgba(214,69,69,.15)}
+.fix-add{display:inline-flex;margin-top:.5rem;font:inherit;font-size:.78rem;font-weight:600;
+  color:var(--accent);cursor:pointer;padding:.3rem .65rem;border:1px solid var(--line);
+  border-radius:7px;background:transparent}
+.fix-add:hover,.fix-add:focus-visible{border-color:var(--accent);outline:none}
+.capsule-fix-field{display:block;margin-top:.6rem;font-size:.75rem;color:var(--muted)}
+.capsule-fix-field>span{display:block;margin-bottom:.2rem}
+.capsule-fix-who{font-size:.82rem;margin:0}
+.capsule-fix-quote{margin:.6rem 0 0;padding:.45rem .6rem;border-left:3px solid var(--accent);
+  background:var(--accent-bg);font-size:.82rem}
+.capsule-fix-says{display:block;font-size:.68rem;color:var(--muted);text-transform:uppercase}
+.capsule-modal-error{color:#d64545;font-size:.78rem;margin:.6rem 0 0}
 .d-notes-add{display:inline-flex;align-items:center;gap:.4rem;margin-top:.6rem;
   font:inherit;font-size:.78rem;font-weight:600;color:var(--accent);cursor:pointer;
   padding:.35rem .7rem;border:1px solid var(--line);border-radius:7px;background:transparent}
@@ -167,19 +215,66 @@ INDEX_JS = """\
   var facets = [["f-type", "type"], ["f-site", "site"], ["f-status", "status"]]
     .map(function (pair) { return { el: document.getElementById(pair[0]), key: pair[1] }; });
 
+  // A facet is a <select> (one choice) or a <details class="ms"> checkbox list (several).
   facets.forEach(function (facet) {
     if (!facet.el) return;
-    var seen = Object.create(null);
+    facet.multi = facet.el.tagName === "DETAILS";
+    var counts = Object.create(null);
     var values = [];
     bodies.forEach(function (body) {
       var value = body.getAttribute("data-" + facet.key);
-      if (value && !seen[value]) { seen[value] = true; values.push(value); }
+      if (!value) return;
+      if (!counts[value]) { counts[value] = 0; values.push(value); }
+      counts[value] += 1;
     });
-    values.sort().forEach(function (value) {
-      var option = document.createElement("option");
-      option.value = value;
-      option.textContent = value;
-      facet.el.appendChild(option);
+    values.sort();
+    if (!facet.multi) {
+      values.forEach(function (value) {
+        var option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        facet.el.appendChild(option);
+      });
+      return;
+    }
+    var list = facet.el.querySelector(".ms-list");
+    values.forEach(function (value) {
+      var label = document.createElement("label");
+      var box = document.createElement("input");
+      box.type = "checkbox";
+      box.value = value;
+      box.addEventListener("change", function () { summarize(facet); apply(); });
+      label.appendChild(box);
+      label.appendChild(document.createTextNode(" " + value + " (" + counts[value] + ")"));
+      list.appendChild(label);
+    });
+    var clear = document.createElement("button");
+    clear.type = "button";
+    clear.className = "ms-clear";
+    clear.textContent = "Clear";
+    clear.addEventListener("click", function () {
+      list.querySelectorAll("input:checked").forEach(function (b) { b.checked = false; });
+      summarize(facet);
+      apply();
+    });
+    list.appendChild(clear);
+  });
+  function chosen(facet) {
+    if (!facet.el) return [];
+    if (!facet.multi) return facet.el.value ? [facet.el.value] : [];
+    return Array.prototype.map.call(
+      facet.el.querySelectorAll(".ms-list input:checked"), function (b) { return b.value; });
+  }
+  function summarize(facet) {
+    var picked = chosen(facet);
+    facet.el.querySelector("summary").textContent = !picked.length
+      ? facet.el.getAttribute("data-all")
+      : picked.length === 1 ? picked[0] : picked.length + " " + facet.el.getAttribute("data-noun");
+  }
+  // A checkbox dropdown closes when you click anywhere else.
+  document.addEventListener("click", function (event) {
+    facets.forEach(function (facet) {
+      if (facet.multi && facet.el.open && !facet.el.contains(event.target)) facet.el.open = false;
     });
   });
 
@@ -201,9 +296,8 @@ INDEX_JS = """\
     bodies.forEach(function (body) {
       var ok = !needle || (body.getAttribute("data-search") || "").indexOf(needle) > -1;
       facets.forEach(function (facet) {
-        if (ok && facet.el && facet.el.value) {
-          ok = body.getAttribute("data-" + facet.key) === facet.el.value;
-        }
+        var picked = ok ? chosen(facet) : [];
+        if (picked.length) ok = picked.indexOf(body.getAttribute("data-" + facet.key)) > -1;
       });
       body.hidden = !ok;
     });
@@ -254,12 +348,31 @@ INDEX_JS = """\
       event.preventDefault();
       show(body);
       pane.focus();
+      // Remember the open capture in the address bar, so a reload (after a
+      // correction) or a shared link reopens it.
+      var id = body.querySelector(".detail") && body.querySelector(".detail").id;
+      if (id && window.history && history.replaceState) history.replaceState(null, "", "#" + id);
     });
   });
 
+  // `#cap-<folder>` opens that capture: on load (the popup's Review link, a
+  // reload) and when an in-page link such as a "superseded" chip changes it.
+  function fromHash() {
+    var id = decodeURIComponent((window.location.hash || "").slice(1));
+    if (id.indexOf("cap-") !== 0) return false;
+    var target = document.getElementById(id);
+    var body = target && target.closest ? target.closest("tbody.capture") : null;
+    if (!body || bodies.indexOf(body) < 0) return false;
+    body.hidden = false;
+    show(body);
+    if (body.scrollIntoView) body.scrollIntoView({ block: "nearest" });
+    return true;
+  }
+  window.addEventListener("hashchange", fromHash);
+
   if (query) query.addEventListener("input", apply);
   facets.forEach(function (facet) {
-    if (facet.el) facet.el.addEventListener("change", apply);
+    if (facet.el && !facet.multi) facet.el.addEventListener("change", apply);
   });
   heads.forEach(function (head) {
     head.tabIndex = 0;
@@ -272,7 +385,81 @@ INDEX_JS = """\
     });
   });
 
+  // Copy: one citation for a family-tree program, or the whole capture as text to paste
+  // into an AI assistant. Built from what the detail shows; only reads the page.
+  function copyFallback(text) {
+    var area = document.createElement("textarea");
+    area.value = text;
+    area.setAttribute("readonly", "");
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    area.remove();
+    return ok;
+  }
+  function copyText(text, button) {
+    var label = button.textContent;
+    function done(ok) {
+      button.textContent = ok ? "Copied" : "Could not copy: select the text instead";
+      setTimeout(function () { button.textContent = label; }, 1800);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(
+        function () { done(true); }, function () { done(copyFallback(text)); });
+    } else {
+      done(copyFallback(text));
+    }
+  }
+  function textOf(el) { return el ? el.textContent.trim() : ""; }
+  function captureAsText(box) {
+    var lines = ["A genealogy source, captured with Genealogy Capsule.",
+                 "Title: " + textOf(box.querySelector(".d-title"))];
+    var gated = false;
+    Array.prototype.forEach.call(box.querySelectorAll(".d-meta dt"), function (dt) {
+      var key = dt.textContent;
+      var dd = dt.nextElementSibling;
+      if (["Source", "Record type", "Captured", "Accessed", "Gating", "Local"].indexOf(key) < 0) return;
+      var link = dd && dd.querySelector("a");
+      var value = key === "Source" && link ? link.href : textOf(dd).replace(/\\s*Open folder$/, "");
+      if (key === "Gating" && value === "gated") gated = true;
+      lines.push((key === "Local" ? "Capture folder" : key) + ": " + value);
+    });
+    Array.prototype.forEach.call(box.querySelectorAll(".cite"), function (p) {
+      lines.push(textOf(p.querySelector(".cite-label")) + ": " + textOf(p.querySelector(".cite-text")));
+    });
+    if (gated) lines.push("Note: from a subscription or sign-in site; for personal research only.");
+    var rows = box.querySelectorAll("table.assertions tbody tr");
+    if (rows.length) {
+      lines.push("", "Facts (person | field | value exactly as written | evidence | the record's words):");
+      Array.prototype.forEach.call(rows, function (tr) {
+        if (tr.classList.contains("retracted")) return;
+        var cells = tr.children;
+        var v = tr.querySelector(".v");
+        var value = v ? v.textContent : (cells[2].firstChild ? cells[2].firstChild.textContent : "");
+        var line = "- " + [textOf(cells[0]), textOf(cells[1]), value.trim(), textOf(cells[3])].join(" | ");
+        var words = tr.getAttribute("data-snippet");
+        lines.push(words ? line + ' | "' + words + '"' : line);
+      });
+    }
+    return lines.join("\\n");
+  }
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest ? event.target.closest(".copy, .copy-ai") : null;
+    if (!button) return;
+    event.preventDefault();
+    if (button.classList.contains("copy")) {
+      copyText(textOf(button.parentNode.querySelector(".cite-text")), button);
+      return;
+    }
+    var box = button.closest("#detail") || button.closest(".detail > td");
+    if (box) copyText(captureAsText(box), button);
+  });
+
   apply();
+  fromHash();
 })();
 """
 
@@ -408,6 +595,260 @@ INDEX_DELETE_JS = """\
       if (cid) openNoteModal(cid);
       return;
     }
+  });
+})();
+"""
+
+# M1 corrections (C6), emitted ONLY on the served page, beside INDEX_DELETE_JS: ✎ edit,
+# ✕ retract and "+ Add a fact" each open one small form and POST /correction with the
+# page's token. The backend appends the correction (nothing is overwritten); the page
+# then reloads, and the address keeps the capture open (`#cap-<folder>`).
+INDEX_CORRECT_JS = """\
+(function () {
+  "use strict";
+  var token = window.__CAPSULE_TOKEN__ || "";
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function detail(b, r) {
+    var d = b && b.detail;
+    if (Array.isArray(d)) d = d.map(function (x) { return x.msg || JSON.stringify(x); }).join("; ");
+    return d || r.statusText;
+  }
+  // `build(modal)` adds the form's fields and returns `read()`, which gives the request
+  // body, or null after focusing whatever still needs filling in.
+  function openForm(title, build, submitLabel) {
+    var backdrop = el("div", "capsule-modal-backdrop");
+    var modal = el("div", "capsule-modal");
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-label", title);
+    modal.appendChild(el("h2", null, title));
+    var read = build(modal);
+    var err = el("p", "capsule-modal-error");
+    err.hidden = true;
+    modal.appendChild(err);
+    modal.appendChild(el("p", "capsule-modal-hint", "Ctrl/⌘ + Enter to save · Esc to cancel"));
+    var actions = el("div", "capsule-modal-actions");
+    var cancel = el("button", "capsule-modal-cancel", "Cancel");
+    cancel.type = "button";
+    var save = el("button", "capsule-modal-save", submitLabel);
+    save.type = "button";
+    actions.appendChild(cancel);
+    actions.appendChild(save);
+    modal.appendChild(actions);
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+    var first = modal.querySelector("input,textarea,select");
+    (first || save).focus();
+
+    // While a save is in flight the form cannot be dismissed: a failure must land in a
+    // form that is still on screen, with what was typed, never in a detached one.
+    var pending = false;
+    function close() {
+      if (pending) return;
+      document.removeEventListener("keydown", onKey);
+      backdrop.remove();
+    }
+    function onKey(ev) {
+      if (ev.key === "Escape") close();
+      else if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter") save.click();
+    }
+    function fail(msg) {
+      pending = false;
+      save.disabled = false;
+      cancel.disabled = false;
+      err.textContent = "Not saved: " + msg;
+      err.hidden = false;
+    }
+    document.addEventListener("keydown", onKey);
+    backdrop.addEventListener("click", function (ev) { if (ev.target === backdrop) close(); });
+    cancel.addEventListener("click", close);
+    save.addEventListener("click", function () {
+      if (save.disabled) return;
+      var body = read();
+      if (!body) return;
+      pending = true;
+      save.disabled = true;
+      cancel.disabled = true;
+      err.hidden = true;
+      fetch("/correction", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Capsule-Token": token },
+        body: JSON.stringify(body),
+      })
+        .then(function (r) {
+          if (r.ok) { window.location.reload(); return; }
+          return r.json().catch(function () { return {}; }).then(function (b) {
+            fail("(" + r.status + ") " + detail(b, r));
+          });
+        })
+        .catch(function (e) { fail(String(e)); });
+    });
+  }
+  function field(modal, labelText, input) {
+    var label = el("label", "capsule-fix-field");
+    label.appendChild(el("span", null, labelText));
+    label.appendChild(input);
+    modal.appendChild(label);
+    return input;
+  }
+  function textInput(value) {
+    var i = el("input", "capsule-modal-text");
+    i.type = "text";
+    i.value = value || "";
+    return i;
+  }
+  function textArea(rows, placeholder) {
+    var t = el("textarea", "capsule-modal-text");
+    t.rows = rows;
+    if (placeholder) t.placeholder = placeholder;
+    return t;
+  }
+  function select(options) {
+    var s = el("select", "capsule-modal-text");
+    options.forEach(function (o) {
+      var opt = el("option", null, o[1]);
+      opt.value = o[0];
+      s.appendChild(opt);
+    });
+    return s;
+  }
+  // The supporting words, so a value is checked against the record, not memory.
+  function quote(modal, text) {
+    if (!text) return;
+    var q = el("blockquote", "capsule-fix-quote");
+    q.appendChild(el("span", "capsule-fix-says", "The page says"));
+    q.appendChild(el("span", null, text));
+    modal.appendChild(q);
+  }
+  // The fact's earlier corrections, oldest first: kept here, not in the table row.
+  function historyList(modal, lines) {
+    if (!lines.length) return;
+    var box = el("div", "capsule-fix-history");
+    box.appendChild(el("span", "capsule-fix-says", "Earlier corrections"));
+    var list = el("ol");
+    lines.forEach(function (line) { list.appendChild(el("li", null, line)); });
+    box.appendChild(list);
+    modal.appendChild(box);
+  }
+  function factOf(button) {
+    var row = button.closest("tr");
+    var table = button.closest("table.assertions");
+    var v = row.querySelector(".v");
+    var history = [];
+    try { history = JSON.parse(row.getAttribute("data-history") || "[]"); } catch (e) { history = []; }
+    return {
+      history: history,
+      captureId: table.getAttribute("data-capture-id"),
+      id: row.getAttribute("data-assertion-id"),
+      snippet: row.getAttribute("data-snippet"),
+      person: row.children[0].textContent,
+      field: row.children[1].textContent,
+      value: v ? v.textContent : "",
+    };
+  }
+  function rationale(input) { return input.value.trim() || null; }
+
+  function editFact(button) {
+    var f = factOf(button);
+    openForm("Correct " + f.field, function (modal) {
+      modal.appendChild(el("p", "capsule-fix-who", f.person + " · " + f.field));
+      quote(modal, f.snippet);
+      historyList(modal, f.history);
+      var value = field(modal, "Value, exactly as the record has it ([?] for illegible)",
+        textInput(f.value));
+      var why = field(modal, "Why (optional)", textArea(2, "e.g. the day is 18, not 13"));
+      return function () {
+        var v = value.value.trim();
+        if (!v || v === f.value) { value.focus(); return null; }
+        return { capture_id: f.captureId, action: "edit", assertion_id: f.id,
+                 new_value: v, rationale: rationale(why) };
+      };
+    }, "Save correction");
+  }
+
+  function retractFact(button) {
+    var f = factOf(button);
+    openForm("Retract this fact?", function (modal) {
+      modal.appendChild(el("p", "capsule-fix-who", f.person + " · " + f.field + ": " + f.value));
+      quote(modal, f.snippet);
+      historyList(modal, f.history);
+      modal.appendChild(el("p", "capsule-modal-hint",
+        "It stays listed, struck through, with your reason. Nothing is deleted."));
+      var why = field(modal, "Why (optional)",
+        textArea(2, "e.g. this is the informant's age, not the deceased's"));
+      return function () {
+        return { capture_id: f.captureId, action: "retract", assertion_id: f.id,
+                 rationale: rationale(why) };
+      };
+    }, "Retract");
+  }
+
+  function addFact(button) {
+    var people = [];
+    try { people = JSON.parse(button.getAttribute("data-personas") || "[]"); } catch (e) { people = []; }
+    var captureId = button.getAttribute("data-capture-id");
+    openForm("Add a fact", function (modal) {
+      var who = field(modal, "Person", select(people.map(function (p) { return [p.id, p.label]; })));
+      var name = field(modal, "Field (e.g. birth_date, residence, father)", textInput(""));
+      var value = field(modal, "Value, exactly as the record has it ([?] for illegible)",
+        textInput(""));
+      var kind = field(modal, "Evidence", select([
+        ["stated", "stated: the record says it"],
+        ["calculated", "calculated: worked out from what it says"],
+        ["estimated", "estimated"],
+      ]));
+      var words = field(modal, "The words on the page that support it",
+        textArea(3, "copy them exactly from the record"));
+      var why = field(modal, "Why (optional)", textArea(2, ""));
+      return function () {
+        var body = { capture_id: captureId, action: "add", persona_id: who.value,
+                     field: name.value.trim(), new_value: value.value.trim(),
+                     evidence_type: kind.value, snippet_text: words.value.trim(),
+                     rationale: rationale(why) };
+        var missing = [[name, body.field], [value, body.new_value], [words, body.snippet_text]]
+          .filter(function (p) { return !p[1]; });
+        if (missing.length) { missing[0][0].focus(); return null; }
+        return body;
+      };
+    }, "Add fact");
+  }
+
+  // "Open folder": the backend opens it in Finder / File Explorer on this computer.
+  document.addEventListener("click", function (e) {
+    var reveal = e.target.closest ? e.target.closest(".reveal") : null;
+    if (!reveal) return;
+    e.preventDefault();
+    var id = reveal.getAttribute("data-capture-id");
+    var label = reveal.textContent;
+    reveal.disabled = true;
+    fetch("/reveal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Capsule-Token": token },
+      body: JSON.stringify(id ? { capture_id: id } : {}),
+    })
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (b) {
+          reveal.textContent = r.ok ? "Opened" : "Could not open (" + detail(b, r) + ")";
+        });
+      })
+      .catch(function (err) { reveal.textContent = "Could not open (" + err + ")"; })
+      .then(function () {
+        setTimeout(function () { reveal.textContent = label; reveal.disabled = false; }, 2500);
+      });
+  });
+
+  document.addEventListener("click", function (e) {
+    var button = e.target.closest ? e.target.closest(".fix-edit,.fix-retract,.fix-add") : null;
+    if (!button) return;
+    e.preventDefault();
+    if (button.classList.contains("fix-edit")) editFact(button);
+    else if (button.classList.contains("fix-retract")) retractFact(button);
+    else addFact(button);
   });
 })();
 """

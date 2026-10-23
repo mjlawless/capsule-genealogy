@@ -78,7 +78,7 @@ def test_the_index_shows_the_pending_state(tmp_path):
 
     _archive(tmp_path, "https://example.org/baptisms/1850")
     page = write_index(tmp_path / "captures").read_text(encoding="utf-8")
-    assert "extraction pending" in page
+    assert "not read yet" in page
 
 
 def test_the_extension_says_extraction_pending():

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Genealogy Capsule",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArUqhQSVxRKL51fvyHVoy75r2nUjzbYbxvdBAwg1SQkGfvLGriuMaW2GbdpYJS/mlLLu3/UJYegtfj+YArX9H/PAZPMG29QRjDzm0XR8liv5A8Zh6F1t9GoNNBlCG/td3r2BDKt0KJlsmGSk1SswWSUmiaJJdOn8LnzpT4UDXTtPs7JN3KxD7TsTuc/hek5193bcYOI0I7NV30tokH4DhUvdOiRa3abfsIV7Y2OUfo5riD3phSsTuWQ91oJoh4xPFO2h+v9DhAhRPVa5zp55GWnyzof4mg3lznfYmwd1LxF+orYBMYpDU49tzAaNZoZzIUIuygDCLAWzvdL1o6mHLoQIDAQAB",
   "description": "Save the genealogy record you are viewing as cited, hashed evidence on your own computer.",
   "icons": {

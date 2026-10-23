@@ -19,6 +19,8 @@ import os
 import re
 import secrets
 import sqlite3
+import subprocess
+import sys
 import threading
 from dataclasses import replace
 from datetime import datetime, timezone
@@ -28,13 +30,15 @@ from typing import Iterator, Literal, Optional, Sequence
 import anthropic
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from capsule.agent.anthropic_transport import AnthropicTransport
 from capsule.agent.base import DEFAULT_MODEL, Agent
 from capsule.capture.manifest import MediaItem, resolve_capture_folder
+from capsule.collection.corrections import overlay_corrections
 from capsule.collection.escape import esc
+from capsule.collection.help import render_help
 from capsule.collection.index import render_index
 from capsule.collection.read import read_all
 from capsule.contracts.evidence import GatingStatus
@@ -42,6 +46,7 @@ from capsule.evals.fixtures import write_fixture
 from capsule.pipeline.annotate import add_note_to_capture
 from capsule.pipeline.correct import CorrectionRequest, apply_correction
 from capsule.config import (
+    correction_fixtures_root,
     default_captures_root,
     default_db_path,
     pairable_extension_ids,
@@ -132,10 +137,14 @@ class Settings(BaseModel):
     db_path: Path
     captures_root: Path
     token: Optional[str] = None
-    # Where a correction auto-writes its eval fixture (the flywheel). Defaults to
-    # the repo's committed `evals/fixtures/` so `capsule eval` finds it; tests
-    # point it at a tmp dir. Has a default so existing Settings(...) callers stand.
-    fixtures_root: Path = Path("evals/fixtures")
+    # Where a correction auto-writes its eval fixture (the flywheel). None means
+    # `eval-fixtures/` beside the database (`correction_fixtures_root`): a fixture holds
+    # the record's values, so it stays in the archive, never in the repo (owner ruling,
+    # 2026-10-23); a test with a tmp database therefore writes to tmp as well.
+    fixtures_root: Optional[Path] = None
+
+    def correction_fixtures(self) -> Path:
+        return self.fixtures_root or correction_fixtures_root(self.db_path)
 
 
 def get_settings() -> Settings:
@@ -146,7 +155,6 @@ def get_settings() -> Settings:
         db_path=default_db_path(),
         captures_root=default_captures_root(),
         token=os.environ.get("CAPSULE_TOKEN") or None,
-        fixtures_root=Path(os.environ.get("CAPSULE_FIXTURES_DIR", "evals/fixtures")),
     )
 
 
@@ -612,7 +620,10 @@ def favicon() -> Response:
 
 
 @app.get("/", response_class=HTMLResponse)
-def index(settings: Settings = Depends(get_settings)) -> HTMLResponse:
+def index(
+    settings: Settings = Depends(get_settings),
+    repository: Repository = Depends(get_repository),
+) -> HTMLResponse:
     """Serve the captures index live, with delete/add-note wired to this backend.
 
     Deliberately UNauthenticated: a browser navigating here can't attach the token
@@ -629,16 +640,75 @@ def index(settings: Settings = Depends(get_settings)) -> HTMLResponse:
     and then drive the mutating endpoints. This is inherent to "serve an
     interactive index from the backend"; it does not expose the token to ordinary
     web pages. With no token configured the index still renders, read-only.
+
+    M1: the served page shows each corrected capture's CURRENT facts, overlaid from the
+    correction log in the database; the static file keeps the model's sealed reading.
     """
-    records = read_all(settings.captures_root)
+    records = overlay_corrections(read_all(settings.captures_root), repository)
     html = render_index(
         records,
         generated_at=datetime.now(timezone.utc),
         delete_token=settings.token,
+        archive_root=str(Path(settings.captures_root).resolve()),
     )
     # nosniff so the HTML can't be reinterpreted as another type; combined with the
     # `<!doctype html>` prefix this makes the token unreadable via <script> include.
     return HTMLResponse(html, headers={"X-Content-Type-Options": "nosniff"})
+
+
+@app.get("/help.html", response_class=HTMLResponse)
+def help_page() -> HTMLResponse:
+    """The short guide the index links to (static text, no collection data)."""
+    return HTMLResponse(render_help(), headers={"X-Content-Type-Options": "nosniff"})
+
+
+@app.get("/index.html", include_in_schema=False)
+def index_alias() -> RedirectResponse:
+    """The guide's "back to the index" link names the static file; here that is `/`."""
+    return RedirectResponse("/", status_code=307)
+
+
+class RevealRequest(BaseModel):
+    """Which folder to show: one capture's, or (no id) the whole archive's."""
+
+    model_config = ConfigDict(extra="forbid")
+    capture_id: Optional[str] = None
+
+
+def _open_in_file_manager(folder: Path) -> None:
+    """Open `folder` in this computer's file manager (no shell; a fixed program)."""
+    if sys.platform == "win32":
+        os.startfile(str(folder))  # type: ignore[attr-defined]  # Windows only
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", str(folder)])
+    else:
+        subprocess.Popen(["xdg-open", str(folder)])
+
+
+@app.post("/reveal")
+def reveal_folder(
+    req: RevealRequest,
+    _auth: None = Depends(require_token),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    """Show a capture's folder, or the archive, in Finder / File Explorer, so the records
+    can be looked at by hand. Opens only the archive or a folder inside it (the capture id
+    is checked like every other capture route); token-gated like every action."""
+    if req.capture_id is None:
+        folder = Path(settings.captures_root)
+        folder.mkdir(parents=True, exist_ok=True)
+    else:
+        try:
+            folder = resolve_capture_folder(settings.captures_root, req.capture_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=f"no such capture: {req.capture_id}") from exc
+    try:
+        _open_in_file_manager(folder.resolve())
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"could not open the folder: {exc}") from exc
+    return {"opened": str(folder.resolve())}
 
 
 @app.delete("/capture/{capture_id}")
@@ -1710,7 +1780,7 @@ def submit_correction(
             repository=repository,
             captures_root=settings.captures_root,
             capture_id=req.capture_id,
-            fixtures_root=settings.fixtures_root,
+            fixtures_root=settings.correction_fixtures(),
         )
         fixture_name = dest.name
     except Exception as exc:  # noqa: BLE001 — flywheel side effect, never fatal

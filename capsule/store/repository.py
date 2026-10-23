@@ -789,23 +789,27 @@ class Repository:
             """,
             (source_id,),
         )
-        return [
-            CorrectionEvent(
-                id=r[0],
-                source_id=r[1],
-                action=CorrectionAction(r[2]),
-                field=r[3],
-                assertion_id=r[4],
-                supersedes_id=r[5],
-                previous_value=r[6],
-                new_value=r[7],
-                actor=r[8],
-                rationale=r[9],
-                agent_call_id=r[10],
-                created_at=r[11],
-            )
-            for r in cursor.fetchall()
-        ]
+        return [_row_to_correction_event(r) for r in cursor.fetchall()]
+
+    def correction_events_by_source(self) -> dict[str, list[CorrectionEvent]]:
+        """Every correction event, grouped by source, each group oldest first.
+
+        One query for the whole collection, so the served index can overlay
+        corrections without a lookup per capture; a source with no corrections is
+        simply absent.
+        """
+        cursor = self.connection.execute(
+            """
+            SELECT id, source_id, action, field, assertion_id, supersedes_id,
+                   previous_value, new_value, actor, rationale, agent_call_id, created_at
+            FROM correction_event
+            ORDER BY created_at, id
+            """
+        )
+        grouped: dict[str, list[CorrectionEvent]] = {}
+        for r in cursor.fetchall():
+            grouped.setdefault(r[1], []).append(_row_to_correction_event(r))
+        return grouped
 
     def record_correction(
         self,
@@ -928,6 +932,40 @@ class Repository:
             (source_id,),
         )
         return [_row_to_assertion(row) for row in cursor.fetchall()]
+
+    def assertions_for_source(self, source_id: str) -> list[Assertion]:
+        """Every assertion row for `source_id`, superseded and retracting rows
+        included, in insertion order — the whole graph, so a reader can follow a
+        fact through its corrections (`current_assertions` is the live subset)."""
+        cursor = self.connection.execute(
+            """
+            SELECT id, source_id, persona_id, snippet_id, field, normalized_field,
+                   verbatim_value, normalized_value, annotation, evidence_type,
+                   confidence, supersedes_id, retracted, created_at
+            FROM assertion
+            WHERE source_id = ?
+            ORDER BY rowid
+            """,
+            (source_id,),
+        )
+        return [_row_to_assertion(row) for row in cursor.fetchall()]
+
+
+def _row_to_correction_event(r: tuple) -> CorrectionEvent:
+    return CorrectionEvent(
+        id=r[0],
+        source_id=r[1],
+        action=CorrectionAction(r[2]),
+        field=r[3],
+        assertion_id=r[4],
+        supersedes_id=r[5],
+        previous_value=r[6],
+        new_value=r[7],
+        actor=r[8],
+        rationale=r[9],
+        agent_call_id=r[10],
+        created_at=r[11],
+    )
 
 
 def _row_to_source(row: tuple) -> Source:

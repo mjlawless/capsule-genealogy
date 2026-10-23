@@ -422,6 +422,16 @@ function hostsOf(origins) {
   return hosts;
 }
 
+// After a capture, the footer link opens THAT capture in the index (`#cap-<folder>`),
+// where what was read can be checked against the record and corrected.
+function pointIndexAtCapture(body) {
+  const link = document.getElementById("index-link");
+  const folder = String((body && body.capture_folder) || "").split(/[\\/]/).pop();
+  if (!link || !folder) return;
+  link.href = INDEX_URL + "#cap-" + encodeURIComponent(folder);
+  link.textContent = "Review & correct this capture ↗";
+}
+
 function formatOutcome(body) {
   const lines = [
     "captured: " + body.url,
@@ -528,6 +538,7 @@ async function captureDocument(button, token, note) {
       return;
     }
     await clearNoteDraft();
+    pointIndexAtCapture(body);
     render(formatOutcome(body) + "\n\n(archived as a document — no text extracted yet)");
   } catch (err) {
     render(
@@ -679,6 +690,7 @@ async function onCapture() {
       return;
     }
     await clearNoteDraft();
+    pointIndexAtCapture(body);
     let out = formatOutcome(body);
     // Say whether the page render landed. Silence here would make a snapshot-only
     // capture look identical to a complete one — and the commonest skip (DevTools

@@ -89,6 +89,26 @@ def default_captures_root() -> Path:
     return data_dir() / "captures"
 
 
+#: The folder, beside the database, where a correction writes its eval fixture.
+CORRECTION_FIXTURES_DIRNAME = "eval-fixtures"
+
+
+def correction_fixtures_root(db_path: Path | None = None) -> Path:
+    """Where corrections write eval fixtures: in the archive, never in the repo.
+
+    A fixture holds the record's transcribed values, and a gated record's values
+    must never be republished, so they stay beside the database they came from
+    (gitignored in a checkout, private on an install) rather than in the repo's
+    committed `evals/fixtures/` (owner ruling, 2026-10-23). `capsule eval` reads both.
+    `CAPSULE_FIXTURES_DIR` overrides it.
+    """
+    explicit = os.environ.get("CAPSULE_FIXTURES_DIR")
+    if explicit:
+        return Path(explicit)
+    base = Path(db_path).parent if db_path is not None else data_dir()
+    return base / CORRECTION_FIXTURES_DIRNAME
+
+
 def stray_databases(db_path: Path) -> list[Path]:
     """Other `capsule.db` files near this one — the shape of the BUG-003 mistake.
 

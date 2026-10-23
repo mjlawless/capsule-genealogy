@@ -24,7 +24,7 @@ Browse a page → click the extension → review what the agent extracted (peopl
 
 Every capture produces a **Source Record** containing:
 
-**Archival evidence.** A local full-page snapshot (single-file HTML + full-page screenshot), a SHA-256 hash of the capture for integrity, the capture timestamp, and — where the page is public — a Wayback Machine snapshot triggered via the Save Page Now API. Paywalled or login-gated pages (e.g., newspapers.com) are archived locally only, with a copyright note.
+**Archival evidence.** A local full-page snapshot (single-file HTML + full-page screenshot), a SHA-256 hash of the capture for integrity, the capture timestamp, and — where the page is public — a Wayback Machine snapshot triggered via the Save Page Now API (*dropped 2026-10-23, see D3: the local snapshot is the archive*). Paywalled or login-gated pages (e.g., newspapers.com) are archived locally only, with a copyright note.
 
 **Citation.** Generated in layered form following *Evidence Explained* conventions: full reference note, short note, and source-list entry — always including access date and archived URL. Site-specific templates for high-traffic sources (FindAGrave, FamilySearch, newspapers.com, Chronicling America, obituary aggregators) with a generic web-page template as fallback.
 
@@ -76,7 +76,7 @@ If Ancestry ever opens partner APIs, a direct integration slots in behind the ca
 
 ## 7. Risks & Mitigations
 
-**Site ToS and copyright.** Archiving paywalled content stays local and personal-use only; nothing is republished. Wayback submission only for public pages. Per-site adapter registry includes a "do not auto-archive" flag.
+**Site ToS and copyright.** Archiving paywalled content stays local and personal-use only; nothing is republished. No Wayback submission for any page (D3). Per-site adapter registry includes a "do not auto-archive" flag.
 
 **LLM extraction errors.** Snippet-level provenance, confidence scores, the Reviewer agent, mandatory human confirmation, and the Phase 0 eval suite as a regression gate.
 
@@ -132,6 +132,10 @@ The assistant component needs retrieval because source pages arrive in wildly va
 **Open sub-questions:** embedding model choice (local vs. API), OCR engine for media, and how correction pairs are privacy-scoped if a hosted tier ever exists.
 
 **Roadmap impact if adopted:** indexing pipeline lands in Phase 2 alongside tree awareness; the conversational assistant and flywheel land in Phase 4. If D1 resolves to Option A, "GEDCOM import" in Phase 2 becomes "Gramps Web adapter," and periodic re-import disappears.
+
+### D3 — Wayback Machine submission (STATUS: dropped, owner 2026-10-23)
+
+§3 and the Archivist role planned to submit every public page to the Wayback Machine (Save Page Now) as an independent, third-party timestamped copy. It was never built (no capture has a Wayback URL) and is now dropped. Reasons: it sends a third party to the record site on the user's behalf, against "you drive, nothing in the background"; many record pages depend on scripts or a signed-in session, so the archived copy would often be a login or blank page; it publishes what the user researches, including pages naming living people; and a page wrongly judged public would be republished, the one mistake the gating rules exist to prevent. The local snapshot, with its SHA-256 hashes, is the archive. A user who wants a public copy of a public page can make one in seconds at web.archive.org/save; a manual per-capture button can be added if users ask. The `wayback_url` field stays in the capture format (always null), so no spec version changes.
 
 ---
 

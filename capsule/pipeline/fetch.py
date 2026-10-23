@@ -15,13 +15,17 @@ from __future__ import annotations
 
 import html as html_lib
 import ipaddress
+import logging
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from functools import lru_cache
 from typing import Any, Callable, Optional, Protocol
 from urllib.parse import urlparse, urlsplit
 
 from capsule.contracts.evidence import GatingStatus
+
+_logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -80,6 +84,44 @@ _AUTH_MARKERS = (
     re.compile(r"\b(?:log|sign)[\s\-_]?out\b", re.IGNORECASE),
     re.compile(r"\bmy[\s\-_]?subscription\b", re.IGNORECASE),
 )
+
+# A notice that you HAVE signed out says nothing about a session. Find a Grave carries a
+# hidden "Sign out successful" dialog on every memorial, signed in or not, which gated them
+# all (free-sites test pass, 2026-10-22).
+_SIGNED_OUT_NOTICE = re.compile(
+    r"\b(?:log|sign)[\s\-_]?out\s+(?:successful(?:ly)?|succeeded|complete)", re.IGNORECASE
+)
+
+# Markup that is not the page anyone sees: a single-page site ships its whole interface in
+# script (Newspapers.com's translation table says "Sign out of all devices" and "Cancel my
+# subscription" to signed-out visitors), so on a site the catalog calls free, only the page
+# itself can show a session. Unknown sites keep counting it: the cautious direction.
+_NOT_PAGE_TEXT = re.compile(
+    r"<script\b.*?</script\s*>|<style\b.*?</style\s*>|<!--.*?-->", re.IGNORECASE | re.DOTALL
+)
+
+#: Catalog access levels whose pages are only shown to a signed-in user.
+_SIGNED_IN_ACCESS = frozenset({"subscription", "free-registration"})
+
+
+@lru_cache(maxsize=1)
+def _catalog() -> tuple:
+    """The supported-sites catalog, or nothing if it cannot be read (never fatal)."""
+    try:
+        from capsule.catalog import load_sites
+
+        return tuple(load_sites())
+    except (OSError, ValueError, KeyError) as exc:
+        _logger.warning("sites catalog unavailable; gating falls back to page markers: %s", exc)
+        return ()
+
+
+def _catalog_access(url: str) -> Optional[str]:
+    """The catalog's access level for this URL's site, or None for a site it doesn't know."""
+    from capsule.catalog import site_for_host
+
+    site = site_for_host(urlsplit(url).hostname or "", list(_catalog()))
+    return site.access if site is not None else None
 
 _DEFAULT_USER_AGENT = "capsule/0.0 (+evidence-capture; reads only the page in view)"
 
@@ -165,8 +207,19 @@ def detect_gating(final_url: str, html: str = "") -> GatingStatus:
     """
     if any(marker in final_url.lower() for marker in _LOGIN_MARKERS):
         return GatingStatus.GATED
-    if html and any(marker.search(html) for marker in _AUTH_MARKERS):
+    # A site the catalog knows is decided by what it is, not by English words on the page:
+    # a subscription or sign-up site's records are only shown to a signed-in user (Archion
+    # says "Abmelden", which no marker reads), and a free site is public unless the page
+    # itself shows a session.
+    access = _catalog_access(final_url)
+    if access in _SIGNED_IN_ACCESS:
         return GatingStatus.GATED
+    if html:
+        body = _SIGNED_OUT_NOTICE.sub(" ", html)
+        if access is not None:
+            body = _NOT_PAGE_TEXT.sub(" ", body)
+        if any(marker.search(body) for marker in _AUTH_MARKERS):
+            return GatingStatus.GATED
     return GatingStatus.PUBLIC
 
 

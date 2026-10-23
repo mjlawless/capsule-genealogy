@@ -167,7 +167,8 @@ captured → extracted → reviewed → matched → attached
 | `attached` | a persona is linked to a tree person | persona↔tree link | M3 |
 
 Only the first two are derivable at M0, so `status` is `extracted` when a capture
-has assertions and `captured` when it does not. The later stages render as `—`
+has assertions and `captured` when it does not. The served page also shows
+`reviewed`, from the correction log (§4c). The later stages render as `—`
 until the data behind them exists. The question this column will be asked, once
 phase 2 lands, is *"what have I captured but not yet pushed into the tree?"* —
 so it is drawn now, at the front, even mostly empty.
@@ -192,6 +193,70 @@ A capture whose `lifecycle.json` ends in `superseded` stays listed, because noth
 hidden or deleted, but its row carries a **superseded** chip linking to the replacement, and its
 detail block gains a "Superseded by" line. The link target is accepted only if it has the
 capture-id shape, since the sidecar is hash-excluded.
+
+### 4c. Corrections on the served page (M1, added 2026-10-23)
+
+A human correction (edit, add, retract) lives only in the database, never in the sealed
+folder. So the two delivery modes (§6) now differ for a corrected capture:
+
+- **Served page** (`GET /`): for each capture with at least one `correction_event`, the
+  backend lays the current facts over the folder's reading. A corrected fact shows its
+  current value and one tag (`edited`, `added`, `added, edited` or `retracted`), however
+  many corrections it has had; its history, oldest first, each line naming both values
+  ("“Anna Grimm” → “Annie Grimm” · owner · date — reason"), is shown in its ✎ form (and in
+  the tag's tooltip, the only place for a retracted fact, which has no form). A retracted
+  fact stays listed, struck through; an added fact is listed after the model's. Status becomes
+  `reviewed` and the "Reviewed" line gives the count and the latest date. Each live fact
+  carries `data-assertion-id`, the CURRENT assertion id, the target of the next correction.
+  A capture with no corrections renders exactly as the folders say.
+- **Static file** (`captures/index.html`): unchanged. It shows the model's sealed reading,
+  carries no assertion ids, and never shows `reviewed`.
+
+`#cap-<folder>` in the address opens that capture on either page, and the served page keeps
+the address in step with the open capture, so a reload or a link reopens it.
+
+**Correcting (served page only).** Each live fact has ✎ (edit its value) and ✕ (retract it);
+a capture that names at least one person has "+ Add a fact" (person, field, value, evidence
+type, and the supporting words, which are required). The edit and retract forms quote the
+fact's supporting words (`data-snippet`). Each form posts to `POST /correction` with the
+page's token and reloads the page at the capture; a refused correction is explained in the
+form, which cannot be dismissed while a save is in flight. A reason, when given, is part of
+the fact's history line. None of these controls, ids or histories appear in the static
+file. Each fact's supporting words (`data-snippet`) appear in both, since 2026-10-23, so
+"Copy for AI" (§4d) carries them from either page.
+
+### 4d. Record categories, filters, lifecycle lines, Help (added 2026-10-23)
+
+Renderer changes only; the entry shape is unchanged, so this stays `captures-index/v2`.
+
+- **Record column and filter use a common category** (`capsule/collection/record_types.py`:
+  Birth & baptism, Marriage, Death & burial, Census & household, Church registers, Probate &
+  wills, Land & property, Military, Immigration & naturalization, Directories & books,
+  Public records, Reference lists, Unclassified). The reader's own record type is kept and
+  shown in the detail ("Record type") and as the category's tooltip.
+- **Record and site filters take several choices** (a checkbox dropdown, each choice with
+  its count); status stays a single choice. Several choices within a filter are OR'ed;
+  filters are AND'ed with each other and with the text box.
+- **Lifecycle lines:** only stages with data are shown: *Reviewed* (correction log, served
+  page) and *Transcribed* (the newest `transcript/*/transcript.json`; on the served page a
+  link to `/review/<folder>`). *Matched* and *Attached* return when the Gramps work gives
+  them data; *OCR'd* became *Transcribed*.
+- **Incomplete captures:** a capture whose `result.json` says `verify_ok: false` carries an
+  `incomplete` chip and an "Incomplete" line with its `verify_shortfall`. A capture with no
+  `result.json` (older) shows neither.
+- **Wayback:** the "Archived" line is gone (submission was dropped, plan.md D3); a capture
+  that carries a `wayback_url` still shows it as "Wayback".
+- **Citation:** each capture's detail shows its full reference note and source-list entry
+  (from `citation.json`) with **Copy** buttons, and **Copy for AI**, which copies the capture
+  as plain text (metadata, both citations, a gated note, and each current fact as person |
+  field | value | evidence | supporting words) to paste into an assistant. Copying only
+  reads the page, so these appear in the static file too: the one exception to "no actions
+  in the static file", since nothing is written.
+- **Help:** the header links `help.html`, a short static guide written beside `index.html`
+  (and served at `/help.html`; `/index.html` redirects to `/`).
+- **Served page only:** the header names the archive folder with an "Open archive folder"
+  button, and each capture's "Local" line has "Open folder"; both call `POST /reveal`
+  (token-gated), which opens the folder in the computer's file manager.
 
 ## 5. Non-goals
 

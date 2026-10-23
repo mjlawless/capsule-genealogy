@@ -79,7 +79,9 @@ public, spending money, and the final public name.
 The private repo stays the development repo. For the next release:
 
 1. Bump the product version in `pyproject.toml` and `extension/manifest.json` together (a test
-   enforces they match), add a `CHANGELOG.md` entry, commit, Codex-review.
+   enforces they match), add a `CHANGELOG.md` entry, commit, Codex-review. Push to the private
+   repo and **wait for its CI to pass on Linux, macOS and Windows** (`gh run watch <id>
+   --exit-status`) before going on: v0.2.3 went public and then failed two Windows-only tests.
 2. `git clone https://github.com/mjlawless/capsule-genealogy.git <dir>`, then replace its
    tracked contents with a fresh `release/export-public.sh <empty dir>` tree (copy over, keep
    `.git`), so the public history grows one commit per release rather than restarting.
@@ -91,7 +93,10 @@ The private repo stays the development repo. For the next release:
    `Install-Capsule-mac.zip`; attach both. Then check both links answer 200:
    `curl -fsSIL https://github.com/mjlawless/capsule-genealogy/releases/latest/download/Install-Capsule.cmd`
    (and the same for `Install-Capsule-mac.zip`).
-4. Follow-up owed: make the Windows CI job blocking (drop `continue-on-error`), since it passed.
+4. Build the Web Store zip (`release/package-extension.sh <out.zip>`, no `key`) for the owner
+   to upload, restart the owner's local server (`launchctl kickstart -k
+   gui/$(id -u)/local.capsule.serve`) and check `/health` reports the new version, then watch
+   the public CI run for the tag (`gh run watch`).
 
 
 ## Owner-only live checks, collected

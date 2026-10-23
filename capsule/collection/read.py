@@ -19,12 +19,16 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from capsule.collection.record_types import record_category
+
 _logger = logging.getLogger(__name__)
 
 _MANIFEST = "manifest.json"
 _CITATION = "citation.json"
 _EXTRACTION = "extraction.json"
 _NOTES = "notes.json"
+_RESULT = "result.json"
+_TRANSCRIPTS = "transcript"
 
 _IMAGE_EXTS = ("jpg", "jpeg", "png", "gif", "webp", "tif", "tiff")
 
@@ -53,6 +57,21 @@ class PersonaView:
 
     label: str
     role: str
+    #: The persona's id, so the served index can add a fact to this person.
+    id: str | None = None
+
+
+@dataclass(frozen=True)
+class CorrectionView:
+    """One human correction to a fact, for display (M1, the served index only)."""
+
+    action: str
+    previous_value: str | None
+    new_value: str | None
+    actor: str
+    created_at: str | None
+    #: The researcher's reason, when they gave one.
+    rationale: str | None = None
 
 
 @dataclass(frozen=True)
@@ -63,6 +82,15 @@ class AssertionView:
     field: str
     value: str
     evidence_type: str
+    #: The assertion's id, so the served index can target it with a correction. From
+    #: `extraction.json`, or, once corrected, the CURRENT row's id in the database.
+    id: str | None = None
+    #: The fact was retracted by a correction; shown struck through, never hidden.
+    retracted: bool = False
+    #: Corrections that produced this value, oldest first. Empty on the static file.
+    corrections: tuple[CorrectionView, ...] = ()
+    #: The words on the page that support the fact (its snippet), shown when correcting it.
+    snippet: str | None = None
 
 
 @dataclass(frozen=True)
@@ -141,22 +169,46 @@ class CaptureRecord:
     #: The replacement's folder name, when it is known; None if this one is current or the
     #: replacement's folder is unavailable.
     superseded_by: str | None = None
+    #: The source's id from `manifest.json`: the key into the database, where corrections live.
+    source_id: str | None = None
+    #: M1 — set only by `corrections.overlay_corrections` (the served index), from the
+    #: correction log: when the latest correction was made, or None if there is none.
+    reviewed_at: str | None = None
+    #: How many corrections the log holds for this capture (0 on the static file).
+    correction_count: int = 0
+    #: The capture's own verdict, from `result.json`: False when it does not hold the
+    #: evidence (e.g. no record image and no text); None when the capture predates it.
+    verify_ok: bool | None = None
+    #: Why `verify_ok` is False, in the capture's own words.
+    verify_shortfall: tuple[str, ...] = ()
+    #: REQ-006: when the newest machine transcript of the capture's scan was made.
+    transcribed_at: str | None = None
+    #: The full Evidence Explained first-reference note from `citation.json`: the text a
+    #: researcher pastes into a tree program's citation.
+    reference_note: str | None = None
 
     @property
     def primary_persona(self) -> str | None:
         return self.personas[0].label if self.personas else None
 
     @property
+    def record_category(self) -> str:
+        """The common category the index shows and filters by (`record_types`)."""
+        return record_category(self.record_type)
+
+    @property
     def status(self) -> str:
         """Where this capture sits on the lifecycle (spec `captures-index/v2` §4).
 
-        `captured -> extracted -> reviewed -> matched -> attached`. Only the
-        first two are derivable from a capture folder: a capture with assertions
-        has been extracted, one without is a bare snapshot (typically a scan
-        awaiting OCR). The later stages need data that lives outside the folder —
-        the correction log (M1), the matcher verdict (M2), the persona-tree link
-        (M3) — so the renderer shows them as pending until those exist.
+        `captured -> extracted -> reviewed -> matched -> attached`. The first two
+        are derivable from a capture folder: a capture with assertions has been
+        extracted, one without is a bare snapshot (typically a scan awaiting OCR).
+        `reviewed` comes from the correction log, which lives in the database, so
+        only the served index (which overlays it) can show it. The matcher verdict
+        (M2) and the persona-tree link (M3) do not exist yet.
         """
+        if self.correction_count:
+            return "reviewed"
         return "extracted" if self.assertions else "captured"
 
 
@@ -241,25 +293,41 @@ def _personas(extraction: dict) -> tuple[tuple[PersonaView, ...], dict[str, str]
         if not isinstance(p, dict):
             continue
         label = str(p.get("label", "")) or "(unlabeled)"
-        views.append(PersonaView(label=label, role=str(p.get("role", "")) or "?"))
         pid = p.get("id")
-        if isinstance(pid, str):
+        pid = pid if isinstance(pid, str) and pid else None
+        views.append(PersonaView(label=label, role=str(p.get("role", "")) or "?", id=pid))
+        if pid:
             by_id[pid] = label
     return tuple(views), by_id
 
 
+def _snippets(extraction: dict) -> dict[str, str]:
+    """snippet id -> its verbatim words, tolerant of anything malformed."""
+    out: dict[str, str] = {}
+    for s in extraction.get("snippets", []) or []:
+        if isinstance(s, dict) and isinstance(s.get("id"), str) and isinstance(
+            s.get("verbatim_text"), str
+        ):
+            out[s["id"]] = s["verbatim_text"]
+    return out
+
+
 def _assertions(extraction: dict, persona_by_id: dict[str, str]) -> tuple[AssertionView, ...]:
     out: list[AssertionView] = []
+    snippets = _snippets(extraction)
     for a in extraction.get("assertions", []) or []:
         if not isinstance(a, dict):
             continue
         label = persona_by_id.get(a.get("persona_id", ""), "?")
+        aid = a.get("id")
         out.append(
             AssertionView(
                 persona_label=label,
                 field=str(a.get("field", "")),
                 value=str(a.get("verbatim_value", "")),
                 evidence_type=str(a.get("evidence_type", "")),
+                id=aid if isinstance(aid, str) and aid else None,
+                snippet=snippets.get(sid) if isinstance(sid := a.get("snippet_id"), str) else None,
             )
         )
     return tuple(out)
@@ -351,6 +419,9 @@ def read_capture_record(folder: Path) -> CaptureRecord:
         wayback_url=archive.get("wayback_url"),
         short_note=citation.get("short_note"),
         source_list_entry=citation.get("source_list_entry"),
+        reference_note=citation.get("reference_note")
+        if isinstance(citation.get("reference_note"), str)
+        else None,
         access_date=citation.get("access_date"),
         archived_url=citation.get("archived_url"),
         personas=personas,
@@ -369,7 +440,27 @@ def read_capture_record(folder: Path) -> CaptureRecord:
         superseded=superseded,
         superseded_by=superseded_by,
         extraction_pending=manifest.get("extraction") == "pending",
+        source_id=source.get("id") if isinstance(source.get("id"), str) else None,
+        **_outcome(folder),
     )
+
+
+def _outcome(folder: Path) -> dict:
+    """`verify_ok`/`verify_shortfall` from the `result.json` sidecar, and the newest
+    transcript's date; tolerant like every other projection (absent is simply unknown)."""
+    result = _load_json(folder / _RESULT)
+    ok = result.get("verify_ok")
+    shortfall = result.get("verify_shortfall")
+    transcribed_at = None
+    for path in (folder / _TRANSCRIPTS).glob("*/transcript.json"):
+        created = (_load_json(path).get("transcription") or {}).get("created_at")
+        if isinstance(created, str) and (transcribed_at is None or created > transcribed_at):
+            transcribed_at = created
+    return {
+        "verify_ok": ok if isinstance(ok, bool) else None,
+        "verify_shortfall": tuple(str(s) for s in shortfall) if isinstance(shortfall, list) else (),
+        "transcribed_at": transcribed_at,
+    }
 
 
 def read_all(captures_root: Path) -> list[CaptureRecord]:

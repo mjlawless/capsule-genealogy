@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.2.5 — correct what was read, and a clearer index
+
+- **Correct what Capsule read, on the index page.** Opened from Capsule
+  (`http://127.0.0.1:8765/`), every fact has ✎ to change its value (the form quotes the words
+  on the page it came from) and ✕ to retract it, and **+ Add a fact** adds something the
+  reading missed about a person it found (adding a person it missed is not possible yet).
+  Corrections are kept beside the original reading, never over
+  it: a corrected fact shows a small *edited*, *added* or *retracted* tag, and its history is
+  in the ✎ form. The capture's status becomes *reviewed*.
+- After a capture, the popup's footer link opens that capture in the index.
+- **Carry a capture into your family tree program.** Each capture shows its full citation
+  (reference note and source-list entry) with Copy buttons, and **Copy for AI** copies the
+  whole capture as text to paste into Claude or another assistant, which can then tell you
+  what to enter in Gramps, RootsMagic or another program. The Help page walks through both
+  ways. There is no direct connection to a tree program yet.
+- **Help:** a short guide to using Capsule, linked from the top of the index.
+- **Record types are grouped** into common categories (Birth & baptism, Marriage, Death &
+  burial, Census & household, and so on); the exact type the reader gave is in each
+  capture's detail. The record and site filters now take several choices at once.
+- **Open folder** buttons show a capture's folder, or the whole archive, in Finder or File
+  Explorer, so you can look at the files yourself.
+- **A capture that does not hold the record is marked "incomplete"**, with the reason. A page
+  saved without an API key says "not read yet" and what to do.
+- **Find a Grave memorials are no longer saved as gated** when you are signed out (a hidden
+  "Sign out successful" notice was read as a signed-in session). Pages from subscription and
+  sign-up sites are now recognized from the list of known sites, not from English words on
+  the page, so a German Archion page is recognized too.
+- The index no longer shows placeholder lines (Matched, Attached, OCR'd); it shows when a
+  scan was transcribed. Wayback Machine submission, planned but never built, is dropped:
+  the copy on your computer is the archive.
+- The installer is now tested on computers with no Python of their own.
+
 ## 0.2.4 — records read by Claude Opus 5.5
 
 - **Records are now read by Claude Opus 5.5** (was Opus 4.8), chosen by testing on 31 real

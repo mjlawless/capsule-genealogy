@@ -5,7 +5,7 @@ computer that turn the record page you are looking at into an archived, cited, h
 that you keep: the page, the record image, what the record says, and an Evidence Explained
 citation.
 
-> **Status: v0.2.4, early access.** Capsule has been used daily on real research (hundreds
+> **Status: v0.2.5, early access.** Capsule has been used daily on real research (hundreds
 > of captures from Irish parish registers, NYC vital records, Ancestry, Archion, Riksarkivet,
 > Newspapers.com and more). Installing it takes one command and a few clicks in Chrome. You can
 > try it **without an AI key**; add one later to have records read. A Chrome Web Store listing
@@ -23,7 +23,10 @@ Open a record page, click **Capture**. Capsule saves a **capture folder** on you
 - an **Evidence Explained-style citation**, with the access date;
 - **SHA-256 hashes** over all of it, so you can prove later that nothing changed.
 
-Everything lands in a browsable collection page (`index.html`) on your own disk.
+Everything lands in a browsable collection page (`index.html`) on your own disk. Opened
+from Capsule itself (`http://127.0.0.1:8765/`), that page also lets you **correct what was
+read**: change a value, retract a fact, or add one it missed about a person it found. Corrections are kept
+beside the original reading, never over it. Its **Help** link explains the rest.
 
 The rules it will not bend:
 

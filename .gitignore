@@ -20,6 +20,9 @@ data/
 *.db
 evals/fixtures/**/snapshot.html
 evals/fixtures/**/media/
+# Fixtures that corrections write beside an archive: the record's values and its snapshot,
+# so never committed, wherever CAPSULE_DATA_DIR puts the archive (even the checkout itself).
+eval-fixtures/
 *.mhtml
 
 # Editor / OS

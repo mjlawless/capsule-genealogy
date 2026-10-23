@@ -46,6 +46,9 @@ jobs:
           CAPSULE_INSTALL_SOURCE: ${{ github.workspace }}
           CAPSULE_HOME: ${{ runner.temp }}/capsule
           CAPSULE_AUTOSTART: "0"
+          # The runner has a Python 3.12 that a user's computer usually lacks: make uv download
+          # its own, as it must for a user, and the smoke check prove that it did.
+          UV_PYTHON_PREFERENCE: only-managed
         run: |
           sh install.sh
           bash scripts/ci-install-smoke.sh
@@ -59,6 +62,7 @@ jobs:
           # A space in the path, as in most Windows profile folders (Codex review).
           CAPSULE_HOME: ${{ runner.temp }}\Capsule Test
           CAPSULE_AUTOSTART: "0"
+          UV_PYTHON_PREFERENCE: only-managed
         run: |
           ./install.ps1
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
@@ -74,6 +78,7 @@ jobs:
         env:
           CAPSULE_INSTALL_SOURCE: ${{ github.workspace }}
           CAPSULE_HOME: ${{ runner.temp }}\Capsule Test
+          UV_PYTHON_PREFERENCE: only-managed
         run: |
           ./install.ps1
           if ($LASTEXITCODE) { exit $LASTEXITCODE }

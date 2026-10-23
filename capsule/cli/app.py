@@ -39,6 +39,7 @@ from capsule.collection.transfer import (
     refresh_notes,
 )
 from capsule.config import (
+    correction_fixtures_root,
     data_dir,
     default_captures_root,
     default_db_path,
@@ -1126,17 +1127,24 @@ def serve(
     uvicorn.run("capsule.backend.app:app", host=host, port=port)
 
 
-def _fixture_dirs(root: Path, only: Optional[str]) -> list[Path]:
-    if not root.is_dir():
-        return []
-    dirs = sorted(d for d in root.iterdir() if d.is_dir())
+#: The repo's hand-checked gold fixtures (committed; their snapshots stay gitignored).
+GOLD_FIXTURES_DIR = Path("evals/fixtures")
+
+
+def _fixture_dirs(roots: list[Path], only: Optional[str]) -> list[Path]:
+    dirs: list[Path] = []
+    for root in roots:
+        if root.is_dir():
+            dirs += sorted(d for d in root.iterdir() if d.is_dir())
     return [d for d in dirs if d.name == only] if only else dirs
 
 
 @app.command("eval")
 def run_evals(
-    fixtures: Path = typer.Option(
-        Path("evals/fixtures"), help="Directory of eval fixtures (one folder each)."
+    fixtures: Optional[Path] = typer.Option(
+        None,
+        help="Directory of eval fixtures (one folder each). Default: the repo's gold "
+        "fixtures plus the ones your corrections wrote, beside your archive.",
     ),
     only: Optional[str] = typer.Option(None, help="Run only the fixture with this name."),
 ) -> None:
@@ -1146,10 +1154,14 @@ def run_evals(
     prints a PASS/FAIL report. Exits non-zero if any runnable fixture regresses,
     so it can gate a prompt/model change. Fixtures whose local `snapshot.html`
     is absent (it stays gitignored) are skipped with a warning, not failed.
+    Corrections write their fixtures beside the archive, not into the repo (a
+    gated record's values must never be republished), so both are read.
     """
-    dirs = _fixture_dirs(fixtures, only)
+    roots = [fixtures] if fixtures is not None else [GOLD_FIXTURES_DIR, correction_fixtures_root()]
+    dirs = _fixture_dirs(roots, only)
     if not dirs:
-        typer.secho(f"no fixtures found under {fixtures}", fg=typer.colors.YELLOW, err=True)
+        where = " or ".join(str(r) for r in roots)
+        typer.secho(f"no fixtures found under {where}", fg=typer.colors.YELLOW, err=True)
         raise typer.Exit(code=1)
 
     _ensure_api_key()

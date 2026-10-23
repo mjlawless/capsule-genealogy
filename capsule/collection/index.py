@@ -18,13 +18,15 @@ from __future__ import annotations
 import json
 import logging
 import re
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional, Sequence
 
-from capsule.collection.assets import INDEX_CSS, INDEX_DELETE_JS, INDEX_JS
+from capsule.collection.assets import INDEX_CORRECT_JS, INDEX_CSS, INDEX_DELETE_JS, INDEX_JS
 from capsule.collection.escape import esc, href
-from capsule.collection.read import CaptureRecord, read_all
+from capsule.collection.help import HELP_FILENAME, render_help
+from capsule.collection.read import AssertionView, CaptureRecord, CorrectionView, read_all
 
 #: A plain, same-folder filename — no path separators. The primary-artifact name
 #: comes from the manifest (untrusted); a relative link is only built when the
@@ -108,6 +110,7 @@ def _search_blob(record: CaptureRecord) -> str:
     """
     parts = (
         record.record_type or "",
+        record.record_category,
         record.primary_persona or "",
         record.site_name or "",
         record.status,
@@ -162,16 +165,22 @@ def _row(record: CaptureRecord, interactive: bool) -> str:
         )
     pending = (
         '<span class="chip pending" title="archived without an API key; not read yet">'
-        "extraction pending</span>"
+        "not read yet</span>"
         if record.extraction_pending
         else ""
     )
+    # The capture's own verdict that it does not hold the evidence (e.g. a scan viewer
+    # whose image was not saved): it must not look like any other row.
+    if record.verify_ok is False:
+        why = "; ".join(record.verify_shortfall) or "this capture does not hold the record"
+        pending += f'<span class="chip incomplete" title="{esc(why)}">incomplete</span>'
     return (
         '<tr class="row">'
         f'<td><span class="pill s-{esc(record.status)}">{esc(record.status)}</span>'
         f"{superseded}{pending}</td>"
         f'<td><a class="rowlink" href="#cap-{esc(record.folder_name)}">'
-        f'{esc(record.record_type or "unclassified")}</a></td>'
+        f'<span title="{esc(record.record_type or "no record type given")}">'
+        f'{esc(record.record_category)}</span></a></td>'
         f"<td>{esc(record.primary_persona or _PENDING)}</td>"
         f"<td><code>{esc(record.site_name or _PENDING)}</code></td>"
         f'<td class="stamp">{esc(_stamp(record.captured_at))}</td>'
@@ -194,15 +203,30 @@ def _doc_link(record: CaptureRecord) -> Optional[str]:
     return f'<a href="./{esc(record.folder_name)}/{esc(name)}">{esc(name)}</a>'
 
 
-def _meta(record: CaptureRecord) -> list[tuple[str, str]]:
+def _reviewed(record: CaptureRecord) -> str:
+    if not record.correction_count:
+        return _PENDING
+    noun = "correction" if record.correction_count == 1 else "corrections"
+    latest = _stamp(record.reviewed_at)
+    return esc(f"{record.correction_count} {noun}" + (f" · latest {latest}" if latest else ""))
+
+
+def _meta(record: CaptureRecord, interactive: bool = False) -> list[tuple[str, str]]:
     """Definition-list pairs: the citation's facts, then the lifecycle spine."""
-    archived = _link(record.wayback_url) if record.wayback_url else "local snapshot only"
     media = str(len(record.media_files)) if record.media_files else _PENDING
     local = f'<a href="./{esc(record.folder_name)}/">{esc(record.folder_name)}/</a>'
     doc = _doc_link(record)
     pairs: list[tuple[str, str]] = [
         ("Source", _link(record.url) if record.url else _PENDING),
-        ("Local", local),
+        # The reader's own words for the record; the row shows its common category.
+        ("Record type", esc(f"{record.record_type} ({record.record_category})")
+         if record.record_type else esc(record.record_category)),
+        ("Local", local + (
+            # Served page only: the backend opens the folder in Finder / File Explorer
+            # (a web page cannot open a folder on disk itself).
+            f' <button type="button" class="reveal" data-capture-id="{esc(record.folder_name)}">'
+            "Open folder</button>" if interactive else ""
+        )),
     ]
     if doc:
         pairs.append(("Document", doc))
@@ -216,20 +240,133 @@ def _meta(record: CaptureRecord) -> list[tuple[str, str]]:
     pairs += [
         ("Captured", esc(record.captured_at or _PENDING)),
         ("Accessed", esc(record.access_date or _PENDING)),
-        ("Archived", archived),
+    ]
+    # Wayback submission was dropped (owner, 2026-10-23): the local snapshot IS the
+    # archive. The field stays in the capture format; a capture that ever carries one
+    # still shows it.
+    if record.wayback_url:
+        pairs.append(("Wayback", _link(record.wayback_url)))
+    pairs += [
         ("Gating", esc(record.gating)),
         ("Copyright", "flagged" if record.copyright_flag else "not flagged"),
         ("Media", esc(media)),
-        # Lifecycle stages with no M0 data source (spec §4).
-        ("Reviewed", _PENDING),
-        ("Matched", _PENDING),
-        ("Attached", _PENDING),
-        ("OCR'd", _PENDING),
+        # `reviewed` comes from the correction log, overlaid only on the served page.
+        # Only stages with data behind them are shown (spec §4): matched and attached
+        # return as lines when the Gramps work gives them something real to say.
+        ("Reviewed", _reviewed(record)),
+        ("Transcribed", _transcribed(record, interactive)),
     ]
+    if record.verify_ok is False:
+        why = "; ".join(record.verify_shortfall) or "this capture does not hold the record"
+        pairs.append(("Incomplete", esc(why)))
     return pairs
 
 
-def _assertions(record: CaptureRecord) -> str:
+def _transcribed(record: CaptureRecord, interactive: bool) -> str:
+    """When the scan was last read by vision; on the served page, a link to that reading."""
+    if not record.transcribed_at:
+        return _PENDING
+    when = esc(_stamp(record.transcribed_at))
+    if not interactive:  # the review page exists only where the backend serves it
+        return when
+    return f'<a href="/review/{esc(record.folder_name)}">{when} · review the reading</a>'
+
+
+def _history_line(c: CorrectionView) -> str:
+    """`“Anna Grimm” → “Annie Grimm” · owner · 2026-10-23 18:02 UTC — why`, as plain
+    text (the caller escapes it): one correction, both sides named."""
+    who = f" · {c.actor}"
+    when = _stamp(c.created_at)
+    who += f" · {when}" if when else ""
+    who += f" — {c.rationale}" if c.rationale else ""
+    if c.action == "edit":
+        return f"“{c.previous_value or ''}” → “{c.new_value or ''}”{who}"
+    if c.action == "add":
+        return f"added “{c.new_value or ''}”{who}"
+    return f"retracted “{c.previous_value or ''}”{who}"
+
+
+def _tag(a: AssertionView) -> str:
+    """A one-word mark that a fact was corrected; the history itself is in the ✎ form
+    (and in the tag's tooltip, for a retracted fact, which has no form)."""
+    if not a.corrections:
+        return ""
+    actions = [c.action for c in a.corrections]
+    if a.retracted:
+        word = "retracted"
+    elif actions[0] == "add":
+        word = "added, edited" if "edit" in actions else "added"
+    else:
+        word = "edited"
+    history = "\n".join(_history_line(c) for c in a.corrections)
+    return f' <span class="tag" title="{esc(history)}">{word}</span>'
+
+
+def _assertion_row(a: AssertionView, interactive: bool) -> str:
+    """One fact. On the served page it carries its id (the target of a correction)
+    and, once corrected, a tag; a retracted fact stays visible, struck."""
+    if a.retracted:
+        value = f"<s>{esc(a.value)}</s>"
+    elif interactive:  # the served page's script reads the current value from here
+        value = f'<span class="v">{esc(a.value)}</span>'
+    else:
+        value = esc(a.value)
+    value += _tag(a)
+    # The record's own words for the fact, on both pages: the ✎ form quotes them, and
+    # "Copy for AI" carries them so the assistant can check each value against the record.
+    attrs = f' data-snippet="{esc(a.snippet)}"' if a.snippet else ""
+    actions = ""
+    if interactive and a.id:
+        attrs += f' data-assertion-id="{esc(a.id)}"'
+        if a.corrections:
+            lines = [_history_line(c) for c in a.corrections]
+            attrs += f' data-history="{esc(json.dumps(lines, ensure_ascii=False))}"'
+        actions = (
+            '<button type="button" class="fix fix-edit" title="Correct this value" '
+            'aria-label="Correct this value">✎</button>'
+            '<button type="button" class="fix fix-retract" title="Retract this fact" '
+            'aria-label="Retract this fact">✕</button>'
+        )
+    if a.retracted:
+        attrs += ' class="retracted"'
+    # The actions cell exists only on the served page; the static file keeps four columns.
+    cell = f'<td class="fixes">{actions}</td>' if interactive else ""
+    return (
+        f"<tr{attrs}><td>{esc(a.persona_label)}</td><td>{esc(a.field)}</td>"
+        f"<td>{value}</td><td>{esc(a.evidence_type)}</td>{cell}</tr>"
+    )
+
+
+def _add_fact_button(record: CaptureRecord) -> str:
+    """"+ Add a fact", on the served page, when the capture names someone to add it to."""
+    named = [p for p in record.personas if p.id]
+    if not named:
+        return ""
+    # Same-name people are common (a household, a Sr and Jr), and choosing the wrong one
+    # would put the fact on the wrong person: name the role, and number exact repeats.
+    repeats = Counter((p.label, p.role) for p in named)
+    seen: Counter[tuple[str, str]] = Counter()
+    people = []
+    for p in named:
+        key = (p.label, p.role)
+        seen[key] += 1
+        text = p.label + (f" ({p.role})" if p.role and p.role != "?" else "")
+        if repeats[key] > 1:
+            text += f" #{seen[key]}"
+        people.append({"id": p.id, "label": text})
+    return (
+        f'<button type="button" class="fix-add" data-capture-id="{esc(record.folder_name)}" '
+        f'data-personas="{esc(json.dumps(people))}">+ Add a fact</button>'
+    )
+
+
+def _assertions(record: CaptureRecord, interactive: bool = False) -> str:
+    """The fact table; on the served page, with ✎/✕ per fact and "+ Add a fact"."""
+    add = _add_fact_button(record) if interactive else ""
+    return _assertion_table(record, interactive) + add
+
+
+def _assertion_table(record: CaptureRecord, interactive: bool) -> str:
     if not record.assertions:
         # Prefer the MODEL's own explanation of why this page yielded nothing ("the
         # record is a scanned image; no transcribable text") over our generic guess.
@@ -242,18 +379,20 @@ def _assertions(record: CaptureRecord) -> str:
                 '<p class="empty-note">No structured assertions extracted. '
                 f"<em>Extractor:</em> {esc(record.extraction_notes)}</p>"
             )
-        return (
-            '<p class="empty-note">No structured assertions extracted yet — '
-            "e.g. a scanned image awaiting OCR (spec §4).</p>"
-        )
-    rows = "".join(
-        f"<tr><td>{esc(a.persona_label)}</td><td>{esc(a.field)}</td>"
-        f"<td>{esc(a.value)}</td><td>{esc(a.evidence_type)}</td></tr>"
-        for a in record.assertions
-    )
+        if record.extraction_pending:
+            return (
+                '<p class="empty-note">Not read yet: this page was saved without an '
+                "Anthropic API key. Add a key in the Capsule popup and choose "
+                "“Read them now”.</p>"
+            )
+        return '<p class="empty-note">No facts were read from this page.</p>'
+    rows = "".join(_assertion_row(a, interactive) for a in record.assertions)
+    table_attrs = f' data-capture-id="{esc(record.folder_name)}"' if interactive else ""
+    fixes_head = '<th><span class="sr-only">Correct</span></th>' if interactive else ""
     return (
-        '<table class="assertions"><thead><tr><th>Persona</th><th>Field</th>'
-        f"<th>Value</th><th>Evidence</th></tr></thead><tbody>{rows}</tbody></table>"
+        f'<table class="assertions"{table_attrs}><thead><tr><th>Persona</th><th>Field</th>'
+        f"<th>Value</th><th>Evidence</th>{fixes_head}</tr></thead>"
+        f"<tbody>{rows}</tbody></table>"
     )
 
 
@@ -320,17 +459,41 @@ def _notes_block(record: CaptureRecord, interactive: bool) -> str:
     )
 
 
+def _citation_block(record: CaptureRecord) -> str:
+    """The citation to carry into a family-tree program, with Copy buttons, and "Copy for
+    AI" (the whole capture as text to paste into an assistant). Copying only reads the
+    page, so unlike the served page's actions it works in the static file too."""
+    rows = []
+    for label, text in (("Reference note", record.reference_note),
+                        ("Source list entry", record.source_list_entry)):
+        if text:
+            rows.append(
+                f'<p class="cite"><span class="cite-label">{label}</span>'
+                f'<span class="cite-text">{esc(text)}</span>'
+                '<button type="button" class="copy">Copy</button></p>'
+            )
+    return (
+        '<div class="d-cite"><h3>Citation</h3>'
+        + "".join(rows)
+        + '<p><button type="button" class="copy-ai" title="Copy this capture as text to paste '
+        'into Claude or another AI assistant">Copy for AI</button></p></div>'
+    )
+
+
 def _detail(record: CaptureRecord, interactive: bool) -> str:
     """The full record. Present in the HTML; the script hides it (spec §3.2)."""
     title = record.primary_persona or record.title or record.record_type or record.folder_name
     parts = [f'<h2 class="d-title">{esc(title)}</h2>']
     if record.short_note:
         parts.append(f'<p class="d-ref">{esc(record.short_note)}</p>')
-    pairs = "".join(f"<dt>{key}</dt><dd>{value}</dd>" for key, value in _meta(record))
+    pairs = "".join(
+        f"<dt>{key}</dt><dd>{value}</dd>" for key, value in _meta(record, interactive)
+    )
     parts.append(f'<dl class="d-meta">{pairs}</dl>')
+    parts.append(_citation_block(record))
     parts.append(_references(record))
     parts.append(_notes_block(record, interactive))
-    parts.append(_assertions(record))
+    parts.append(_assertions(record, interactive))
     return (
         f'<tr class="detail" id="cap-{esc(record.folder_name)}">'
         f'<td colspan="{_COLUMNS}">{"".join(parts)}</td></tr>'
@@ -341,7 +504,9 @@ def _capture(record: CaptureRecord, interactive: bool) -> str:
     """One capture is one `<tbody>`: its row plus its detail, sorted as a unit."""
     attrs = " ".join(
         (
-            f'data-type="{esc(record.record_type or "unclassified")}"',
+            # The common category (`record_types`), so the filter offers a dozen choices
+            # rather than every wording the reader used; the exact type is in the detail.
+            f'data-type="{esc(record.record_category)}"',
             f'data-site="{esc(record.site_name or "unknown")}"',
             f'data-status="{esc(record.status)}"',
             f'data-gating="{esc(record.gating)}"',
@@ -368,10 +533,14 @@ def _controls(count: int) -> str:
     return (
         '<div class="controls">'
         '<input id="q" type="search" placeholder="Filter captures…" aria-label="Filter captures">'
-        '<select id="f-type" aria-label="Filter by record type">'
-        '<option value="">All records</option></select>'
-        '<select id="f-site" aria-label="Filter by site">'
-        '<option value="">All sites</option></select>'
+        # Record and site take several choices at once (owner, 2026-10-23): a checkbox list
+        # in a dropdown, filled by the script from the rows. Status stays a single choice.
+        '<details class="ms" id="f-type" data-all="All records" data-noun="record types">'
+        '<summary aria-label="Filter by record type">All records</summary>'
+        '<div class="ms-list"></div></details>'
+        '<details class="ms" id="f-site" data-all="All sites" data-noun="sites">'
+        '<summary aria-label="Filter by site">All sites</summary>'
+        '<div class="ms-list"></div></details>'
         '<select id="f-status" aria-label="Filter by status">'
         '<option value="">All statuses</option></select>'
         f'<span class="count"><span id="shown">{count}</span> shown</span>'
@@ -384,6 +553,7 @@ def render_index(
     *,
     generated_at: datetime,
     delete_token: Optional[str] = None,
+    archive_root: Optional[str] = None,
 ) -> str:
     """Render the collection to a self-contained HTML document (pure — no I/O).
 
@@ -415,10 +585,18 @@ def render_index(
     # `<` so a token containing `</script>` (or `<!--`) can never break out
     # of the script element into HTML. It authorizes the same localhost backend
     # that served this page (same-origin), never a visited web page.
+    # Where the records are on this computer, to look at by hand (served page only).
+    archive_line = (
+        f'<p class="meta">Your archive: <code>{esc(archive_root)}</code> '
+        '<button type="button" class="reveal">Open archive folder</button></p>\n'
+        if interactive and archive_root
+        else ""
+    )
     token_literal = json.dumps(delete_token).replace("<", "\\u003c")
     delete_script = (
         f"<script>window.__CAPSULE_TOKEN__={token_literal};</script>\n"
         f"<script>{INDEX_DELETE_JS}</script>\n"
+        f"<script>{INDEX_CORRECT_JS}</script>\n"
         if interactive
         else ""
     )
@@ -438,9 +616,11 @@ def render_index(
         "</head>\n"
         "<body>\n"
         "<header>\n"
-        "<h1>Genealogy Capsule — Captures Index</h1>\n"
+        '<h1>Genealogy Capsule — Captures Index <a class="help-link" href="help.html">'
+        "Help</a></h1>\n"
         f'<p class="meta">{count} {noun} · generated {_iso_z(generated_at)} · '
         "generated file, do not edit by hand · spec <code>captures-index/v2</code></p>\n"
+        f"{archive_line}"
         f"{controls}\n"
         "</header>\n"
         f"{main}\n"
@@ -477,5 +657,7 @@ def write_index(
     root.mkdir(parents=True, exist_ok=True)
     path = root / INDEX_FILENAME
     path.write_text(document, encoding="utf-8")
+    # The guide the index links to, beside it, so the link works offline and in an export.
+    (root / HELP_FILENAME).write_text(render_help(), encoding="utf-8")
     _remove_legacy(root)
     return path

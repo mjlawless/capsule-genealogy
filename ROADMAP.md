@@ -17,12 +17,12 @@ for evaluators).
 
 ## Next: evidence you can work with
 
-- **Review and correct.** A side panel to accept or correct each extracted fact. Corrections
-  are kept append-only beside the original reading, and become test cases for the extractor.
+- **Review and correct.** Correct, retract or add each fact from the captures index.
+  Corrections are kept append-only beside the original reading, and become test cases for
+  the extractor. (Built; ships in the next release.)
 - **Better handwriting transcription** of scanned certificates and registers.
 - **More sources handled natively,** starting with the National Library of Ireland's parish
   register viewer.
-- **Wayback Machine submission** for public (non-paywalled) pages.
 - **A larger evaluation set,** so changes to extraction can be measured, not guessed.
 
 ## Later: from evidence to a tree

@@ -196,6 +196,19 @@ aside:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .capsule-modal-actions .capsule-modal-save{background:var(--accent);
   border-color:var(--accent);color:#fff;font-weight:600}
 .capsule-modal-actions button:disabled{opacity:.6;cursor:default}
+/* "Read with AI" (served page only): tick captures not read yet, then read them. */
+.readbar{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin-top:.6rem;
+  padding:.4rem .7rem;border:1px solid var(--line);border-radius:8px;
+  background:var(--accent-bg);font-size:.82rem}
+.readbar button{font:inherit;font-size:.8rem;padding:.3rem .8rem;border-radius:7px;
+  cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--fg)}
+.readbar .rb-go{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.readbar button:disabled{opacity:.55;cursor:default}
+.rb-status{color:var(--muted)}
+.pick{margin:0 .4rem 0 0;vertical-align:middle;cursor:pointer}
+.capsule-read-list{max-height:12rem;overflow:auto;font-size:.8rem;margin:.4rem 0;
+  padding-left:1.1rem}
+.capsule-read-note{font-size:.8rem;color:var(--muted);margin:.45rem 0 0}
 """
 
 INDEX_JS = """\
@@ -212,7 +225,8 @@ INDEX_JS = """\
 
   // Facet options are derived from the rows, so the renderer never has to
   // compute a vocabulary it would then have to keep in sync.
-  var facets = [["f-type", "type"], ["f-site", "site"], ["f-status", "status"]]
+  var facets = [["f-type", "type"], ["f-site", "site"], ["f-status", "status"],
+                ["f-read", "read"]]
     .map(function (pair) { return { el: document.getElementById(pair[0]), key: pair[1] }; });
 
   // A facet is a <select> (one choice) or a <details class="ms"> checkbox list (several).
@@ -343,6 +357,9 @@ INDEX_JS = """\
     row.addEventListener("click", function (event) {
       // The record-type cell is a real anchor to the inline detail, so it works
       // with JS off. With JS on we intercept it and open the pane instead.
+      // A tick box (served page) is its own control: no detail, and never preventDefault,
+      // which would undo the tick.
+      if (event.target.closest && event.target.closest("input.pick")) return;
       var anchor = event.target.closest ? event.target.closest("a") : null;
       if (anchor && !anchor.classList.contains("rowlink")) return;
       event.preventDefault();
@@ -359,6 +376,13 @@ INDEX_JS = """\
   // reload) and when an in-page link such as a "superseded" chip changes it.
   function fromHash() {
     var id = decodeURIComponent((window.location.hash || "").slice(1));
+    // `#not-read` (the popup's link): show only the captures waiting to be read.
+    var reading = document.getElementById("f-read");
+    if (id === "not-read" && reading && reading.querySelector('option[value="not read yet"]')) {
+      reading.value = "not read yet";
+      apply();
+      return true;
+    }
     if (id.indexOf("cap-") !== 0) return false;
     var target = document.getElementById(id);
     var body = target && target.closest ? target.closest("tbody.capture") : null;
@@ -850,5 +874,247 @@ INDEX_CORRECT_JS = """\
     else if (button.classList.contains("fix-retract")) retractFact(button);
     else addFact(button);
   });
+})();
+"""
+
+# "Read with AI" (owner, 2026-10-24), emitted ONLY on the served page. Reads the ticked
+# captures, or with none ticked every waiting capture the filters show, after a confirmation
+# that names them and the rough cost. Only captures still waiting carry a tick box; the
+# backend refuses any other (`POST /read`). Progress comes from `/settings/status`.
+INDEX_READ_JS = """\
+(function () {
+  "use strict";
+  var token = window.__CAPSULE_TOKEN__ || "";
+  var bar = document.getElementById("readbar");
+  var table = document.getElementById("captures");
+  if (!bar || !table || !token) return;
+  var go = bar.querySelector(".rb-go");
+  var clear = bar.querySelector(".rb-clear");
+  var status = bar.querySelector(".rb-status");
+  var keySet = bar.getAttribute("data-key") === "set";
+  var running = false;
+  var watched = false;
+  var hinted = false;  // the status line holds the "add a key" hint, not progress
+  // One polling chain at a time: every poll is scheduled through here, so a retry, a focus
+  // and the normal tick never pile up into parallel chains.
+  var timer = null;
+  function schedule(ms) { clearTimeout(timer); timer = setTimeout(poll, ms); }
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function headers() { return { "Content-Type": "application/json", "X-Capsule-Token": token }; }
+  function detail(b, r) {
+    var d = b && b.detail;
+    if (d && typeof d === "object" && !Array.isArray(d)) d = d.message;
+    if (Array.isArray(d)) d = d.map(function (x) { return x.msg || JSON.stringify(x); }).join("; ");
+    return d || r.statusText;
+  }
+  function boxes() { return Array.prototype.slice.call(table.querySelectorAll("input.pick")); }
+  function bodyOf(box) { return box.closest("tbody.capture"); }
+  // The ticked captures; with none ticked, every waiting capture the filters show.
+  function targets() {
+    var all = boxes();
+    var ticked = all.filter(function (b) { return b.checked; });
+    if (ticked.length) return { list: ticked, ticked: true };
+    return { list: all.filter(function (b) { var t = bodyOf(b); return t && !t.hidden; }),
+             ticked: false };
+  }
+  function refresh() {
+    var t = targets();
+    var n = t.list.length;
+    clear.hidden = !t.ticked;
+    if (running) { go.disabled = true; go.textContent = "Reading…"; return; }
+    if (!keySet) {
+      go.disabled = true;
+      go.textContent = "Read with AI";
+      status.textContent = "Add your Anthropic API key in the Capsule popup to read these.";
+      hinted = true;
+      return;
+    }
+    if (hinted) { status.textContent = ""; hinted = false; }
+    go.disabled = n === 0;
+    go.textContent = n === 0 ? "None shown is waiting to be read"
+      : t.ticked ? "Read " + n + " ticked with AI" : "Read all " + n + " shown with AI";
+  }
+  // The page's title (what the person saw), then its site and when it was saved.
+  function describe(box) {
+    var body = bodyOf(box);
+    var cells = body.querySelector(".row").children;
+    return [body.querySelector(".d-title"), cells[3], cells[4]]
+      .map(function (c) { return c ? c.textContent.trim() : ""; }).filter(Boolean).join(" · ");
+  }
+
+  function confirmRead(list) {
+    var n = list.length;
+    var gated = list.filter(function (b) { return bodyOf(b).getAttribute("data-gating") === "gated"; });
+    var backdrop = el("div", "capsule-modal-backdrop");
+    var modal = el("div", "capsule-modal");
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    var title = "Read " + n + (n === 1 ? " capture" : " captures") + " with AI?";
+    modal.setAttribute("aria-label", title);
+    modal.appendChild(el("h2", null, title));
+    var items = el("ul", "capsule-read-list");
+    list.slice(0, 50).forEach(function (b) { items.appendChild(el("li", null, describe(b))); });
+    if (n > 50) items.appendChild(el("li", null, "… and " + (n - 50) + " more"));
+    modal.appendChild(items);
+    var cost = (n * 0.09).toFixed(2);
+    modal.appendChild(el("p", "capsule-read-note",
+      "Claude reads each page from the copy saved on your computer, never the live site. " +
+      "Billed to your Anthropic key: roughly $" + cost + " (about 9 US cents a typical page). " +
+      "Each reading becomes a new capture; the saved one is kept and marked replaced."));
+    if (gated.length) {
+      modal.appendChild(el("p", "capsule-read-note",
+        gated.length + " of these " + (gated.length === 1 ? "is" : "are") + " from a subscription " +
+        "or sign-in site: the saved text goes to Anthropic to be read, as it does when you " +
+        "capture with a key."));
+    }
+    var err = el("p", "capsule-modal-error");
+    err.hidden = true;
+    modal.appendChild(err);
+    var actions = el("div", "capsule-modal-actions");
+    var cancel = el("button", "capsule-modal-cancel", "Cancel");
+    cancel.type = "button";
+    var ok = el("button", "capsule-modal-save", "Read " + n);
+    ok.type = "button";
+    actions.appendChild(cancel);
+    actions.appendChild(ok);
+    modal.appendChild(actions);
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+    cancel.focus();
+
+    // While the request is in flight the dialog stays: a refusal must land where it is seen.
+    var pending = false;
+    function close() {
+      if (pending) return;
+      document.removeEventListener("keydown", onKey);
+      backdrop.remove();
+    }
+    function onKey(ev) { if (ev.key === "Escape") close(); }
+    function fail(msg) {
+      pending = false;
+      ok.disabled = false;
+      cancel.disabled = false;
+      err.textContent = "Not started: " + msg;
+      err.hidden = false;
+    }
+    document.addEventListener("keydown", onKey);
+    backdrop.addEventListener("click", function (ev) { if (ev.target === backdrop) close(); });
+    cancel.addEventListener("click", close);
+    ok.addEventListener("click", function () {
+      if (ok.disabled) return;
+      pending = true;
+      ok.disabled = true;
+      cancel.disabled = true;
+      err.hidden = true;
+      var ids = list.map(function (b) { return b.getAttribute("data-capture-id"); });
+      fetch("/read", { method: "POST", headers: headers(), body: JSON.stringify({ capture_ids: ids }) })
+        .then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (b) {
+            if (!r.ok) { fail("(" + r.status + ") " + detail(b, r)); return; }
+            pending = false;
+            close();
+            list.forEach(function (box) { box.checked = false; });
+            boxes().forEach(function (box) { box.disabled = true; });
+            var skipped = (b.refused || []).length;
+            running = true;
+            watched = true;
+            hinted = false;
+            status.textContent = "Reading 0 of " + b.started + "…" +
+              (skipped ? " (" + skipped + " skipped: already read or not found)" : "");
+            refresh();
+            schedule(1500);
+          });
+        })
+        .catch(function (e) { fail(String(e)); });
+    });
+  }
+
+  function finished(r) {
+    running = false;
+    if (!r.failed && !r.last_error) {
+      status.textContent = "Read " + r.done + ". Showing the results…";
+      window.location.reload();
+      return;
+    }
+    status.textContent = "Read " + (r.done || 0) + " of " + (r.total || 0) + "; " + (r.failed || 0) +
+      " could not be read. Last problem: " + (r.last_error || "unknown") +
+      ". Nothing was lost: those captures are still waiting. ";
+    var again = el("button", null, "Reload");
+    again.type = "button";
+    again.addEventListener("click", function () { window.location.reload(); });
+    status.appendChild(again);
+  }
+
+  // A reading started in another window ended. This page keeps its ticks (no automatic
+  // reload); anything the other window read is refused by the server if tried again.
+  function elsewhereFinished() {
+    running = false;
+    boxes().forEach(function (box) { box.disabled = false; });
+    refresh();
+    status.textContent = "A reading started in another window has finished. ";
+    var again = el("button", null, "Reload to see it");
+    again.type = "button";
+    again.addEventListener("click", function () { window.location.reload(); });
+    status.appendChild(again);
+  }
+  // A failed check never ends the watch: while reading, it retries; idle, coming back to
+  // the tab asks again.
+  function lost() {
+    if (running) {
+      status.textContent = "Lost touch with Capsule; trying again…";
+      schedule(5000);
+    } else {
+      status.textContent = "Could not reach Capsule. Is it running?";
+    }
+  }
+  function poll() {
+    fetch("/settings/status", { headers: headers() })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (s) {
+        if (!s) { lost(); return; }
+        keySet = s.api_key === "set";
+        var r = s.reading || {};
+        if (r.running) {
+          running = true;
+          boxes().forEach(function (box) { box.disabled = true; });
+          hinted = false;
+          status.textContent = "Reading " + r.done + " of " + r.total + "…" +
+            (r.failed ? " (" + r.failed + " could not be read so far)" : "");
+          refresh();
+          schedule(2000);
+          return;
+        }
+        if (running && watched) { finished(r); return; }
+        if (running) { elsewhereFinished(); return; }
+        refresh();
+      })
+      .catch(lost);
+  }
+
+  table.addEventListener("change", function (ev) {
+    if (ev.target.classList && ev.target.classList.contains("pick")) refresh();
+  });
+  // Filters show and hide rows; the button counts what is shown.
+  new MutationObserver(refresh).observe(table, { attributes: true, subtree: true, attributeFilter: ["hidden"] });
+  clear.addEventListener("click", function () {
+    boxes().forEach(function (box) { box.checked = false; });
+    refresh();
+  });
+  go.addEventListener("click", function () {
+    var t = targets();
+    if (!go.disabled && t.list.length) confirmRead(t.list);
+  });
+  // Coming back from the popup (where a key is added) re-asks, so the button wakes up
+  // without a reload and the ticks are kept.
+  window.addEventListener("focus", function () { schedule(0); });
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) schedule(0); });
+  refresh();
+  schedule(0);
 })();
 """

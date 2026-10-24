@@ -5,7 +5,7 @@ computer that turn the record page you are looking at into an archived, cited, h
 that you keep: the page, the record image, what the record says, and an Evidence Explained
 citation.
 
-> **Status: v0.2.5, early access.** Capsule has been used daily on real research (hundreds
+> **Status: v0.2.6, early access.** Capsule has been used daily on real research (hundreds
 > of captures from Irish parish registers, NYC vital records, Ancestry, Archion, Riksarkivet,
 > Newspapers.com and more). Installing it takes one command and a few clicks in Chrome. You can
 > try it **without an AI key**; add one later to have records read. A Chrome Web Store listing
@@ -131,8 +131,9 @@ You need about 10 minutes and Google Chrome.
 4. **Capture something:** open a record page and click **Capture**. Your collection is at
    `http://127.0.0.1:8765/`.
 5. **Optional: add your Anthropic API key** in the Capsule popup (*Anthropic API key*). It is
-   checked, kept in your computer's own password store, and used from then on. Then click
-   **Read them now** to read the pages you archived before.
+   checked, kept in your computer's own password store, and used from then on. Pages you
+   archived before are not read until you choose them: tick them in the index and click
+   **Read with AI**.
 
 Your archive is kept in your user data folder (`~/Library/Application Support/Capsule` on
 macOS, `%LOCALAPPDATA%\Capsule` on Windows), not in the program folder, so updating or

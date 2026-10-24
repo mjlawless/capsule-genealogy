@@ -17,7 +17,7 @@ from dataclasses import replace
 from datetime import datetime
 from typing import Callable, Optional, Sequence
 
-from capsule.collection.read import AssertionView, CaptureRecord, CorrectionView
+from capsule.collection.read import AssertionView, CaptureRecord, CorrectionView, is_unverified
 from capsule.contracts.evidence import Assertion, CorrectionAction, CorrectionEvent
 from capsule.store.repository import Repository
 
@@ -70,6 +70,9 @@ def _overlay(
         except LookupError:
             return None
 
+    # A retraction shows the value it removed; it must keep that fact's unverified mark too.
+    removed_by = {a.id: rows.get(a.supersedes_id) for a in rows.values() if a.supersedes_id}
+
     def follow(start: str) -> tuple[Optional[Assertion], tuple[CorrectionView, ...]]:
         chain: list[CorrectionView] = []
         current, seen = start, {start}
@@ -89,12 +92,12 @@ def _overlay(
             views.append(replace(folder_view, id=None))
             continue
         final, chain = follow(folder_view.id)
-        views.append(_project(final, chain, labels, folder_view.persona_label, words))
+        views.append(_project(final, chain, labels, folder_view.persona_label, words, removed_by))
     for event in events:
         if event.action is not CorrectionAction.ADD:
             continue
         final, chain = follow(event.assertion_id)
-        views.append(_project(final, (_view(event), *chain), labels, "?", words))
+        views.append(_project(final, (_view(event), *chain), labels, "?", words, removed_by))
 
     return replace(
         record,
@@ -110,6 +113,7 @@ def _project(
     labels: dict[str, str],
     fallback_label: str,
     words: Callable[[str], Optional[str]],
+    removed_by: Optional[dict[str, Optional[Assertion]]] = None,
 ) -> AssertionView:
     """The display row for the end of one fact's chain."""
     if final is None:  # unreachable with an intact graph; never raise inside the index
@@ -127,6 +131,9 @@ def _project(
             retracted=True,
             corrections=chain,
             snippet=snippet,
+            unverified=is_unverified(final.annotation) or is_unverified(
+                getattr((removed_by or {}).get(final.id), "annotation", None)
+            ),
         )
     return AssertionView(
         persona_label=label,
@@ -136,4 +143,5 @@ def _project(
         id=final.id,
         corrections=chain,
         snippet=snippet,
+        unverified=is_unverified(final.annotation),
     )

@@ -363,26 +363,60 @@ def test_found_a_replacement_whose_rows_never_landed_is_trashed_and_re_read(tmp_
     assert len(list((tmp_path / "captures" / "_trash").glob("*/manifest.json"))) == 1
 
 
-def test_found_a_reinstated_capture_is_read_afresh_not_given_back_the_rejected_reading(tmp_path):
-    """Codex review: extract -> reinstate (the person rejects the reading) -> extract must not
-    silently re-apply the rejected reading; and --all must find the capture pending again."""
+def test_a_reinstated_capture_is_never_read_again_from_the_command_line(tmp_path, monkeypatch):
+    """Owner ruling 2026-10-24: a capture is read at most once, by the CLI as by the index.
+    extract -> reinstate (the reading set aside) -> `capsule extract <id>` is refused without
+    a model call, and `--all` no longer counts it as waiting."""
+    import pytest
+    from typer.testing import CliRunner
+
+    import capsule.cli.app as cli
+    from capsule.agent.base import Agent
+    from capsule.agent.fake import FakeTransport
     from capsule.collection.read import read_capture_record
-    from capsule.pipeline.reextract import pending_captures
+    from capsule.pipeline.reextract import extract_capture, waiting_captures
     from capsule.pipeline.supersede import reinstate_capture
     from capsule.store.repository import Repository
 
     pending = _archive_page(tmp_path, "https://example.org/b/1", _PAGE, (2026, 3, 1, 9))
-    first = _extract(tmp_path, pending.capture_folder.name)
+    original = pending.capture_folder.name
+    _extract(tmp_path, original)
     repo = Repository(tmp_path / "capsule.db")
     try:
         reinstate_capture(repository=repo, captures_root=tmp_path / "captures",
-                          capture_id=pending.capture_folder.name, reason="wrong reading")
+                          capture_id=original, reason="wrong reading")
     finally:
         repo.close()
-    assert pending_captures(tmp_path / "captures") == [pending.capture_folder.name]
-    second = _extract(tmp_path, pending.capture_folder.name)
-    assert not second.resumed and second.replacement != first.replacement
-    assert read_capture_record(pending.capture_folder).superseded_by == second.replacement.name
+    assert waiting_captures(tmp_path / "captures") == []
+    before = sorted(p.parent.name for p in (tmp_path / "captures").glob("*/manifest.json"))
+
+    calls = []
+
+    class Counting(FakeTransport):
+        def send(self, *a, **k):
+            calls.append(1)
+            return super().send(*a, **k)
+
+    agent = Agent(name="x", model="m", transport=Counting(json.dumps(_RAW)))
+    repo = Repository(tmp_path / "capsule.db")
+    try:
+        with pytest.raises(ValueError, match="read before"):
+            extract_capture(repository=repo, captures_root=tmp_path / "captures",
+                            capture_id=original, agent=agent)
+    finally:
+        repo.close()
+
+    monkeypatch.setattr(cli, "_build_agent", lambda captures_root: agent)
+    common = ["--db", str(tmp_path / "capsule.db"), "--captures", str(tmp_path / "captures")]
+    one = CliRunner().invoke(cli.app, ["extract", original, *common])
+    assert one.exit_code == 1 and "read before" in one.output, one.output
+    every = CliRunner().invoke(cli.app, ["extract", "--all", *common])
+    assert every.exit_code == 0 and "nothing is waiting" in every.output, every.output
+
+    assert calls == []
+    after = sorted(p.parent.name for p in (tmp_path / "captures").glob("*/manifest.json"))
+    assert after == before
+    assert read_capture_record(pending.capture_folder).superseded is False
 
 
 def test_found_a_damaged_interrupted_reading_is_never_applied(tmp_path, monkeypatch):
@@ -412,51 +446,3 @@ def test_found_a_damaged_interrupted_reading_is_never_applied(tmp_path, monkeypa
     assert read_capture_record(pending.capture_folder).superseded is False
 
 
-def test_found_the_ledger_follows_a_re_reading_after_a_reinstatement(tmp_path):
-    """Codex review: extract A->B, reinstate A (B rejected), extract A->C: the ledger must name
-    C, not the rejected B."""
-    import tests.test_backend_ancestry as ta
-    from capsule.agent.base import Agent
-    from capsule.agent.fake import FakeTransport
-    from capsule.backend.app import provide_agent
-    from capsule.pipeline.reextract import extract_capture
-    from capsule.pipeline.supersede import reinstate_capture
-    from capsule.store.ledger import AncestryLedger
-    from capsule.store.repository import Repository
-
-    client, backend = ta._client(tmp_path)
-    backend.app.dependency_overrides[provide_agent] = lambda: None
-    try:
-        resp = client.post(
-            "/capture",
-            json={"url": ta._ANCESTRY_URL, "html": ta._PAGE, "expected_apid": ta._APID},
-            headers=ta._AUTH,
-        )
-    finally:
-        backend.app.dependency_overrides.clear()
-    original = Path(resp.json()["capture_folder"]).name
-
-    def read():
-        repo = Repository(tmp_path / "capsule.db")
-        try:
-            return extract_capture(
-                repository=repo, captures_root=tmp_path / "captures", capture_id=original,
-                agent=Agent(name="x", model="m", transport=FakeTransport(json.dumps(ta._RAW))),
-            )
-        finally:
-            repo.close()
-
-    first = read()
-    repo = Repository(tmp_path / "capsule.db")
-    try:
-        reinstate_capture(repository=repo, captures_root=tmp_path / "captures",
-                          capture_id=original)
-    finally:
-        repo.close()
-    second = read()
-    ledger = AncestryLedger(tmp_path / "capsule.db")
-    try:
-        row = ledger.latest(ta._APID)
-    finally:
-        ledger.close()
-    assert row.capture_id == second.replacement.name != first.replacement.name

@@ -23,7 +23,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional, Sequence
 
-from capsule.collection.assets import INDEX_CORRECT_JS, INDEX_CSS, INDEX_DELETE_JS, INDEX_JS
+from capsule.collection.assets import (
+    INDEX_CORRECT_JS,
+    INDEX_CSS,
+    INDEX_DELETE_JS,
+    INDEX_JS,
+    INDEX_READ_JS,
+)
 from capsule.collection.escape import esc, href
 from capsule.collection.help import HELP_FILENAME, render_help
 from capsule.collection.read import AssertionView, CaptureRecord, CorrectionView, read_all
@@ -163,10 +169,19 @@ def _row(record: CaptureRecord, interactive: bool) -> str:
             '<span class="chip superseded" title="superseded — the replacement is not in '
             'this collection">superseded</span>'
         )
+    # Only a capture still waiting: an original that a later reading replaced is read.
     pending = (
         '<span class="chip pending" title="archived without an API key; not read yet">'
         "not read yet</span>"
-        if record.extraction_pending
+        if record.awaiting_reading
+        else ""
+    )
+    # Served page only: tick the captures to read with AI. Never on one already read
+    # (owner, 2026-10-24), and never on the static file, which cannot ask for a reading.
+    pick = (
+        f'<input type="checkbox" class="pick" data-capture-id="{esc(record.folder_name)}" '
+        'title="Tick to read this capture with AI" aria-label="Tick to read this capture">'
+        if interactive and record.awaiting_reading
         else ""
     )
     # The capture's own verdict that it does not hold the evidence (e.g. a scan viewer
@@ -176,7 +191,7 @@ def _row(record: CaptureRecord, interactive: bool) -> str:
         pending += f'<span class="chip incomplete" title="{esc(why)}">incomplete</span>'
     return (
         '<tr class="row">'
-        f'<td><span class="pill s-{esc(record.status)}">{esc(record.status)}</span>'
+        f'<td>{pick}<span class="pill s-{esc(record.status)}">{esc(record.status)}</span>'
         f"{superseded}{pending}</td>"
         f'<td><a class="rowlink" href="#cap-{esc(record.folder_name)}">'
         f'<span title="{esc(record.record_type or "no record type given")}">'
@@ -379,11 +394,21 @@ def _assertion_table(record: CaptureRecord, interactive: bool) -> str:
                 '<p class="empty-note">No structured assertions extracted. '
                 f"<em>Extractor:</em> {esc(record.extraction_notes)}</p>"
             )
-        if record.extraction_pending:
+        if record.awaiting_reading:
             return (
                 '<p class="empty-note">Not read yet: this page was saved without an '
-                "Anthropic API key. Add a key in the Capsule popup and choose "
-                "“Read them now”.</p>"
+                "Anthropic API key. With a key added in the Capsule popup, tick it on the "
+                "index Capsule serves (http://127.0.0.1:8765/) and choose Read with AI.</p>"
+            )
+        if record.extraction_pending and record.superseded:
+            return (
+                '<p class="empty-note">Saved without an API key and read later: the '
+                "capture that replaces this one holds its facts.</p>"
+            )
+        if record.extraction_pending:
+            return (
+                '<p class="empty-note">Saved without an API key. It was read once and that '
+                "reading was set aside; reading it again is not offered yet.</p>"
             )
         return '<p class="empty-note">No facts were read from this page.</p>'
     rows = "".join(_assertion_row(a, interactive) for a in record.assertions)
@@ -509,6 +534,8 @@ def _capture(record: CaptureRecord, interactive: bool) -> str:
             f'data-type="{esc(record.record_category)}"',
             f'data-site="{esc(record.site_name or "unknown")}"',
             f'data-status="{esc(record.status)}"',
+            # Read by AI, waiting to be read, or a file that is not read (owner, 2026-10-24).
+            f'data-read="{esc(record.reading)}"',
             f'data-gating="{esc(record.gating)}"',
             # The full ISO timestamp, so sorting separates two captures made on
             # the same day. ISO-8601 UTC sorts correctly as a plain string.
@@ -543,6 +570,8 @@ def _controls(count: int) -> str:
         '<div class="ms-list"></div></details>'
         '<select id="f-status" aria-label="Filter by status">'
         '<option value="">All statuses</option></select>'
+        '<select id="f-read" aria-label="Filter by AI reading">'
+        '<option value="">Read or not</option></select>'
         f'<span class="count"><span id="shown">{count}</span> shown</span>'
         "</div>"
     )
@@ -554,6 +583,7 @@ def render_index(
     generated_at: datetime,
     delete_token: Optional[str] = None,
     archive_root: Optional[str] = None,
+    key_set: bool = False,
 ) -> str:
     """Render the collection to a self-contained HTML document (pure — no I/O).
 
@@ -592,11 +622,24 @@ def render_index(
         if interactive and archive_root
         else ""
     )
+    # Served page only, and only while something is waiting: tick captures, then read them
+    # with the user's own key (owner, 2026-10-24: never everything at once by default).
+    waiting = sum(1 for record in records if record.awaiting_reading)
+    read_bar = (
+        f'<div class="readbar" id="readbar" data-key="{"set" if key_set else "missing"}">'
+        f'<span class="rb-text">{waiting} not read yet.</span> '
+        '<button type="button" class="rb-go" disabled>Read with AI</button> '
+        '<button type="button" class="rb-clear" hidden>Clear ticks</button> '
+        '<span class="rb-status" role="status" aria-live="polite"></span></div>\n'
+        if interactive and waiting
+        else ""
+    )
     token_literal = json.dumps(delete_token).replace("<", "\\u003c")
     delete_script = (
         f"<script>window.__CAPSULE_TOKEN__={token_literal};</script>\n"
         f"<script>{INDEX_DELETE_JS}</script>\n"
         f"<script>{INDEX_CORRECT_JS}</script>\n"
+        f"<script>{INDEX_READ_JS}</script>\n"
         if interactive
         else ""
     )
@@ -622,6 +665,7 @@ def render_index(
         "generated file, do not edit by hand · spec <code>captures-index/v2</code></p>\n"
         f"{archive_line}"
         f"{controls}\n"
+        f"{read_bar}"
         "</header>\n"
         f"{main}\n"
         f"<script>{INDEX_JS}</script>\n"

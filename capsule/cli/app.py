@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
+import shutil
 import sqlite3
 from enum import Enum
 from pathlib import Path
@@ -60,7 +62,7 @@ from capsule.pipeline.failure_log import failed_call_sink
 from capsule.pipeline.fetch import HttpxFetcher
 from capsule.pipeline.pipeline import CaptureOutcome, run_capture, run_document_capture
 from capsule.pipeline.sniff import MAX_ARTIFACT_BYTES, sniff
-from capsule.pipeline.reextract import extract_capture, pending_captures
+from capsule.pipeline.reextract import extract_capture, waiting_captures
 from capsule.pipeline.supersede import (
     reconcile_lifecycle,
     reinstate_capture,
@@ -75,6 +77,11 @@ _AGENT_NAME = "extractor"
 
 
 DOTENV_FILE = Path(".env")
+
+#: CAPSULE_DATA_DIR as the PROCESS was started with, before `./.env` is loaded. `capsule
+#: mcp` is started by an AI app from a folder the user does not choose, so a `.env` there
+#: must never pick its archive (REQ-012 §3, Codex review).
+_PROCESS_DATA_DIR = os.environ.get("CAPSULE_DATA_DIR")
 
 
 def _load_dotenv() -> bool:
@@ -338,7 +345,7 @@ def extract(
         None, help="A capture archived without an API key (extraction pending)."
     ),
     all_pending: bool = typer.Option(
-        False, "--all", help="Read every capture whose extraction is still pending."
+        False, "--all", help="Read every capture that is still waiting to be read."
     ),
     db: Path = typer.Option(default_factory=default_db_path, help="SQLite evidence index path."),
     captures: Path = typer.Option(
@@ -349,12 +356,13 @@ def extract(
 
     Each pending capture's ARCHIVED page (not the live site) is read into a new capture that
     replaces it; the old one is kept and marked superseded. The citation keeps the date you
-    originally viewed the page.
+    originally viewed the page. A capture is read at most once: one whose reading was set
+    aside (`capsule supersede --reinstate`) is not read again.
     """
     if bool(capture_id) == all_pending:
         typer.secho("give a capture id, or --all", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=2)
-    targets = [capture_id] if capture_id else pending_captures(captures)
+    targets = [capture_id] if capture_id else waiting_captures(captures)
     if not targets:
         typer.echo("nothing is waiting to be read")
         return
@@ -1203,6 +1211,89 @@ def run_evals(
         )
     if regressions:
         raise typer.Exit(code=1)
+
+
+def _connector_command(archive: Path, *, page_text: bool, exclude_gated: bool) -> list[str]:
+    """The exact command an AI app should run: full path to uv (an installed copy has no
+    `capsule` on PATH), this installation's project, and the archive, all absolute."""
+    uv = shutil.which("uv") or str(Path.home() / ".local" / "bin" / "uv")
+    project = Path(__file__).resolve().parents[2]
+    command = [uv, "run", "--project", str(project), "capsule", "mcp",
+               "--data-dir", str(archive.resolve())]
+    if page_text:
+        command.append("--page-text")
+    if exclude_gated:
+        command.append("--exclude-gated")
+    return command
+
+
+@app.command("mcp")
+def mcp_server(
+    data_dir: Optional[Path] = typer.Option(
+        None,
+        "--data-dir",
+        help="The archive to read (the folder holding capsule.db and captures/). Required "
+        "unless CAPSULE_DATA_DIR is set: an AI app starts this from a folder you don't choose.",
+    ),
+    print_config: bool = typer.Option(
+        False, "--print-config", help="Print the setup to paste into Claude Desktop / Claude Code."
+    ),
+    page_text: bool = typer.Option(
+        False, "--page-text", help="Also let the assistant read a saved page's full text."
+    ),
+    exclude_gated: bool = typer.Option(
+        False, "--exclude-gated", help="Hide captures from subscription and sign-in sites."
+    ),
+) -> None:
+    """Let your AI assistant read this archive (REQ-012): a read-only MCP server.
+
+    Your AI app (Claude Desktop, Claude Code) starts it; it answers from your captures
+    with citations and changes nothing. Run `capsule mcp --print-config` here, in the
+    folder you normally run Capsule from, to get the exact setup to paste into the app.
+    """
+    from capsule.config import data_dir as default_data_dir
+    from capsule.connector.archive import Archive, ArchiveError, ConnectorSettings
+
+    if print_config:
+        # Run by the user from their Capsule folder, where the usual lookup (.env included)
+        # finds their archive.
+        archive = data_dir or default_data_dir()
+        try:
+            Archive(ConnectorSettings(data_dir=archive)).check()
+        except ArchiveError as exc:
+            typer.secho(str(exc), fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=1)
+        command = _connector_command(archive, page_text=page_text, exclude_gated=exclude_gated)
+        config = {"mcpServers": {"capsule": {"command": command[0], "args": command[1:]}}}
+        typer.echo("Claude Desktop: open Settings, then Developer, then Edit Config, and add")
+        typer.echo("this to the file (merge it into \"mcpServers\" if that is already there):\n")
+        typer.echo(json.dumps(config, indent=2))
+        typer.echo("\nClaude Code: run")
+        typer.echo("  claude mcp add capsule -- " + " ".join(shlex.quote(c) for c in command))
+        typer.echo("\nThen restart the app. The archive it will read: " + str(archive.resolve()))
+        return
+
+    # Serving: only an explicit archive, never one found from the working folder or its .env.
+    archive = data_dir or (Path(_PROCESS_DATA_DIR) if _PROCESS_DATA_DIR else None)
+    if archive is None:
+        typer.secho(
+            "capsule mcp needs --data-dir (the archive to read). Run "
+            "`capsule mcp --print-config` from your Capsule folder to get the right setup.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(code=2)
+    settings = ConnectorSettings(
+        data_dir=archive, include_gated=not exclude_gated, page_text=page_text
+    )
+    try:
+        Archive(settings).check()  # refuse an empty or wrong archive before serving
+    except ArchiveError as exc:
+        typer.secho(str(exc), fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
+    from capsule.connector.server import run
+
+    run(settings)
 
 
 if __name__ == "__main__":  # pragma: no cover

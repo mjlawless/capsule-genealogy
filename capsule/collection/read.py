@@ -91,6 +91,9 @@ class AssertionView:
     corrections: tuple[CorrectionView, ...] = ()
     #: The words on the page that support the fact (its snippet), shown when correcting it.
     snippet: str | None = None
+    #: Capsule could not find the supporting words on the saved page when it built the
+    #: capture (`[unverified: …]` in the annotation): the value may not be on the record.
+    unverified: bool = False
 
 
 @dataclass(frozen=True)
@@ -166,6 +169,9 @@ class CaptureRecord:
     superseded: bool = False
     #: v0.2 — archived without an API key; the record has not been read yet.
     extraction_pending: bool = False
+    #: True when `lifecycle.json` ever recorded `superseded`, even if reinstated since: a
+    #: pending capture read once is never offered for reading again (owner, 2026-10-24).
+    ever_superseded: bool = False
     #: The replacement's folder name, when it is known; None if this one is current or the
     #: replacement's folder is unavailable.
     superseded_by: str | None = None
@@ -190,6 +196,22 @@ class CaptureRecord:
     @property
     def primary_persona(self) -> str | None:
         return self.personas[0].label if self.personas else None
+
+    @property
+    def awaiting_reading(self) -> bool:
+        """Archived without a key and not yet read. The manifest's `pending` marker is sealed
+        and never changes, so an original whose reading replaced it stays marked pending:
+        only the lifecycle says it was read."""
+        return self.extraction_pending and not self.superseded and not self.ever_superseded
+
+    @property
+    def reading(self) -> str:
+        """The index's "AI reading" filter value: was this page read, or can it be?"""
+        if self.awaiting_reading:
+            return "not read yet"
+        if self.is_document:
+            return "file, not read"
+        return "read"
 
     @property
     def record_category(self) -> str:
@@ -301,6 +323,14 @@ def _personas(extraction: dict) -> tuple[tuple[PersonaView, ...], dict[str, str]
     return tuple(views), by_id
 
 
+#: The mark `pipeline/build.py` appends when a fact's supporting words were not found.
+UNVERIFIED_MARK = "[unverified"
+
+
+def is_unverified(annotation: object) -> bool:
+    return isinstance(annotation, str) and UNVERIFIED_MARK in annotation
+
+
 def _snippets(extraction: dict) -> dict[str, str]:
     """snippet id -> its verbatim words, tolerant of anything malformed."""
     out: dict[str, str] = {}
@@ -328,6 +358,7 @@ def _assertions(extraction: dict, persona_by_id: dict[str, str]) -> tuple[Assert
                 evidence_type=str(a.get("evidence_type", "")),
                 id=aid if isinstance(aid, str) and aid else None,
                 snippet=snippets.get(sid) if isinstance(sid := a.get("snippet_id"), str) else None,
+                unverified=is_unverified(a.get("annotation")),
             )
         )
     return tuple(out)
@@ -374,6 +405,13 @@ def _supersession(folder: Path) -> tuple[bool, str | None]:
         return False, None
     name = latest.get("superseded_by_capture_id")
     return True, (name if isinstance(name, str) and _CAPTURE_ID_SHAPE.match(name) else None)
+
+
+def _ever_superseded(folder: Path) -> bool:
+    return any(
+        isinstance(e, dict) and e.get("event") == "superseded"
+        for e in _load_json_array(folder / _LIFECYCLE)
+    )
 
 
 def read_capture_record(folder: Path) -> CaptureRecord:
@@ -438,6 +476,7 @@ def read_capture_record(folder: Path) -> CaptureRecord:
         primary_artifact=primary_artifact,
         is_document=is_document,
         superseded=superseded,
+        ever_superseded=_ever_superseded(folder),
         superseded_by=superseded_by,
         extraction_pending=manifest.get("extraction") == "pending",
         source_id=source.get("id") if isinstance(source.get("id"), str) else None,

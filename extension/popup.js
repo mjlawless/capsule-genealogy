@@ -765,14 +765,12 @@ async function refreshKeyStatus() {
     pendingRow.hidden = false;
     document.getElementById("pending-text").textContent =
       "Reading captures: " + reading.done + " of " + reading.total + "…";
-    document.getElementById("read-pending").disabled = true;
   } else if (s.pending > 0) {
     pendingRow.hidden = false;
     // The last run's failure is shown again when the popup reopens, not just once.
     if (reading.failed || reading.last_error) render(readingSummary(reading));
     document.getElementById("pending-text").textContent =
-      s.pending + " capture(s) waiting to be read.";
-    document.getElementById("read-pending").disabled = s.api_key !== "set";
+      s.pending + " capture(s) not read yet.";
   } else {
     pendingRow.hidden = true;
   }
@@ -811,26 +809,16 @@ async function onSaveKey() {
     return;
   }
   input.value = ""; // never keep the key in the popup
-  render(res.ok ? "Key saved. New captures will be read." : "Not saved: " + errorDetail(res.body, res));
+  render(
+    res.ok
+      ? "Key saved. New captures will be read. To read ones saved earlier, choose them on the " +
+          "index page."
+      : "Not saved: " + errorDetail(res.body, res)
+  );
   await refreshKeyStatus();
 }
 
-async function onReadPending() {
-  const res = await settingsFetch("/settings/read-pending", { method: "POST" });
-  if (!res.ok) {
-    render("Could not start: " + errorDetail(res.body, res));
-    return;
-  }
-  const poll = async () => {
-    const s = await refreshKeyStatus();
-    if (s && s.reading && s.reading.running) setTimeout(poll, 2000);
-    else if (s) render(readingSummary(s.reading));
-  };
-  poll();
-}
-
 document.getElementById("save-key").addEventListener("click", onSaveKey);
-document.getElementById("read-pending").addEventListener("click", onReadPending);
 
 // On open: prefill the token, and probe the page for embedded-media hosts so the
 // Capture click can request them gesture-first. (Opening the popup grants
@@ -1052,6 +1040,8 @@ async function startMain(health) {
 
   const indexLink = document.getElementById("index-link");
   if (indexLink) indexLink.href = INDEX_URL;
+  const readLink = document.getElementById("read-in-index");
+  if (readLink) readLink.href = INDEX_URL + "#not-read";
 
   const noteEl = document.getElementById("note");
   // Resolve the tab URL up front so the note draft is restored — and re-saved on

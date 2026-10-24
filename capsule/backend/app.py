@@ -72,9 +72,11 @@ from capsule.pipeline.pipeline import CaptureOutcome, run_capture, run_document_
 from capsule.pipeline.sniff import MAX_ARTIFACT_BYTES, sniff
 from capsule.pipeline.page_identity import accepted_page_label
 from capsule.pipeline.reextract import (
+    ReadingBusy,
     background_status,
-    pending_captures,
+    choose_readable,
     start_background_reading,
+    waiting_captures,
 )
 from capsule.pipeline.render_check import (
     EVIDENCE_IMAGE_STATUSES,
@@ -650,6 +652,9 @@ def index(
         generated_at=datetime.now(timezone.utc),
         delete_token=settings.token,
         archive_root=str(Path(settings.captures_root).resolve()),
+        # Whether "Read with AI" can work now; the page re-asks `/settings/status`, so a
+        # key added after the page loaded is noticed without a reload.
+        key_set=bool(os.environ.get("ANTHROPIC_API_KEY")),
     )
     # nosniff so the HTML can't be reinterpreted as another type; combined with the
     # `<!doctype html>` prefix this makes the token unreadable via <script> include.
@@ -932,7 +937,8 @@ def settings_status(
         "version": build_version(),
         "api_key": "set" if os.environ.get("ANTHROPIC_API_KEY") else "missing",
         "api_key_source": api_key_source(),
-        "pending": len(pending_captures(settings.captures_root)),
+        # What the index offers to read (never one already read once).
+        "pending": len(waiting_captures(settings.captures_root)),
         "reading": {
             "running": reading.running,
             "total": reading.total,
@@ -1706,18 +1712,62 @@ def settings_api_key(
 
 
 @app.post("/settings/read-pending")
-def settings_read_pending(
+def settings_read_pending(_auth: None = Depends(require_token)) -> dict:
+    """Retired: it read EVERY waiting capture, which may not be what the user wants (owner,
+    2026-10-24). A 0.2.5 popup still calls it, so it answers with where to go instead."""
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            "Reading every waiting capture at once is no longer offered. Open the Capsule "
+            "index (http://127.0.0.1:8765/), tick the captures to read, and choose Read with AI."
+        ),
+    )
+
+
+class ReadCapturesRequest(BaseModel):
+    """The captures a person ticked on the index page, to be read with their key."""
+
+    model_config = ConfigDict(extra="forbid")
+    capture_ids: list[str] = Field(..., min_length=1, max_length=5000)
+
+
+@app.post("/read")
+def read_captures(
+    req: ReadCapturesRequest,
     _auth: None = Depends(require_token),
     settings: Settings = Depends(get_settings),
     agent: Optional[Agent] = Depends(provide_agent),
 ) -> dict:
-    """Read every capture archived before the key was added, in the background."""
+    """Read the chosen captures that were archived without a key, in the background.
+
+    Only a capture still waiting to be read is read; any other is refused with its reason
+    (one already read is never read again here). 400 without a key, 409 while another
+    reading runs, 422 when none of the chosen captures can be read. Progress is in
+    `GET /settings/status`.
+    """
     if agent is None:
-        raise HTTPException(status_code=400, detail="Add your Anthropic API key first.")
-    state = start_background_reading(
-        db_path=settings.db_path, captures_root=settings.captures_root, agent=agent
-    )
-    return {"running": state.running, "total": state.total}
+        raise HTTPException(
+            status_code=400,
+            detail="Add your Anthropic API key in the Capsule popup first.",
+        )
+    readable, refused = choose_readable(settings.captures_root, req.capture_ids)
+    refusals = [{"capture_id": cid, "reason": why} for cid, why in refused]
+    if not readable:
+        raise HTTPException(
+            status_code=422,
+            detail={"message": "None of the chosen captures is waiting to be read.",
+                    "refused": refusals},
+        )
+    try:
+        state = start_background_reading(
+            db_path=settings.db_path,
+            captures_root=settings.captures_root,
+            agent=agent,
+            targets=readable,
+        )
+    except ReadingBusy as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"started": len(readable), "total": state.total, "refused": refusals}
 
 
 @app.post("/note", response_model=NoteResponse)

@@ -116,7 +116,7 @@ def _catalog() -> tuple:
         return ()
 
 
-def _catalog_access(url: str) -> Optional[str]:
+def catalog_access(url: str) -> Optional[str]:
     """The catalog's access level for this URL's site, or None for a site it doesn't know."""
     from capsule.catalog import site_for_host
 
@@ -211,7 +211,7 @@ def detect_gating(final_url: str, html: str = "") -> GatingStatus:
     # a subscription or sign-up site's records are only shown to a signed-in user (Archion
     # says "Abmelden", which no marker reads), and a free site is public unless the page
     # itself shows a session.
-    access = _catalog_access(final_url)
+    access = catalog_access(final_url)
     if access in _SIGNED_IN_ACCESS:
         return GatingStatus.GATED
     if html:

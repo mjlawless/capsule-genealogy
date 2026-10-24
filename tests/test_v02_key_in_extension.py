@@ -90,13 +90,14 @@ def test_pending_captures_are_read_in_the_background_once_a_key_exists(client):
     )
     assert archived.json()["extraction_pending"] is True
     assert client.get("/settings/status", headers=tb._AUTH).json()["pending"] == 1
-    refused = client.post("/settings/read-pending", headers=tb._AUTH)
+    chosen = {"capture_ids": [Path(archived.json()["capture_folder"]).name]}
+    refused = client.post("/read", json=chosen, headers=tb._AUTH)
     assert refused.status_code == 400  # no key yet
 
     app.dependency_overrides[provide_agent] = lambda: Agent(
         name="extractor", model="m", transport=FakeTransport(json.dumps(tb._RAW))
     )
-    started = client.post("/settings/read-pending", headers=tb._AUTH)
+    started = client.post("/read", json=chosen, headers=tb._AUTH)
     assert started.status_code == 200 and started.json()["total"] == 1
     for _ in range(100):
         status = client.get("/settings/status", headers=tb._AUTH).json()
@@ -123,7 +124,6 @@ def test_found_a_database_that_will_not_open_does_not_wedge_background_reading(t
     from capsule.agent.base import Agent
     from capsule.agent.fake import FakeTransport
 
-    monkeypatch.setattr(rx, "pending_captures", lambda root: ["20260101-example-aaaa1111"])
 
     class Broken:
         def __init__(self, *_a, **_k):
@@ -131,7 +131,12 @@ def test_found_a_database_that_will_not_open_does_not_wedge_background_reading(t
 
     monkeypatch.setattr(rx, "Repository", Broken)
     agent = Agent(name="x", model="m", transport=FakeTransport("{}"))
-    rx.start_background_reading(db_path=tmp_path / "c.db", captures_root=tmp_path, agent=agent)
+    rx.start_background_reading(
+        db_path=tmp_path / "c.db",
+        captures_root=tmp_path,
+        agent=agent,
+        targets=["20260101-example-aaaa1111"],
+    )
     for _ in range(100):
         state = rx.background_status()
         if not state.running:

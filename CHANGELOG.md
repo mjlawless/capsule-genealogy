@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.6 — choose which pages to read, and ask an AI about your archive
+
+- **Choose which saved pages to read.** Adding an API key no longer offers to read every
+  page saved without one. On the index, pages not read yet have a tick box: tick some (or
+  filter the list) and click **Read with AI**, which shows the pages and a rough cost before
+  it starts. A page is read once: one that was already read is not read again, here or with
+  `capsule extract`. A new **Read or not** filter shows what has been read. The popup's "Read them now" is replaced by a link
+  to those pages in the index.
+
+- **Ask an AI about your archive.** `capsule mcp` lets Claude Desktop or Claude Code read
+  your archive and answer from it, citing the captures it used; it can change nothing.
+  `capsule mcp --print-config` prints the setup to paste in. See the Help page.
+
 ## 0.2.5 — correct what was read, and a clearer index
 
 - **Correct what Capsule read, on the index page.** Opened from Capsule

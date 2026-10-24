@@ -112,6 +112,21 @@ class Repository:
             self.connection.close()
             raise
 
+    @classmethod
+    def open_read_only(cls, db_path: str | Path) -> "Repository":
+        """A Repository that cannot write: the database opened read-only (SQLite
+        `mode=ro`), with NO schema or migration step, which `__init__` always runs (and
+        commits). For the AI connector (REQ-012 §4), which must never change the archive:
+        any write through this connection fails. Readers waiting on a capture's commit
+        wait up to the busy timeout rather than failing at once. A database older than
+        the code may lack newer tables or columns, which surfaces as
+        `sqlite3.OperationalError` for the caller to handle."""
+        repository = cls.__new__(cls)
+        uri = Path(db_path).resolve().as_uri() + "?mode=ro"
+        repository.connection = sqlite3.connect(uri, uri=True, timeout=5.0)
+        repository.connection.execute("PRAGMA busy_timeout = 5000")
+        return repository
+
     def close(self) -> None:
         self.connection.close()
 

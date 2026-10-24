@@ -1,6 +1,6 @@
 [project]
 name = "capsule"
-version = "0.2.5"
+version = "0.2.6"
 description = "Evidence-grade genealogy capture — turn a web page into an archived, cited, tree-ready source."
 requires-python = ">=3.12"
 dependencies = [
@@ -25,6 +25,7 @@ dependencies = [
     "python-dotenv>=1.0",
     "platformdirs>=4",
     "keyring>=25",
+    "mcp>=2.3.0",
 ]
 
 [project.scripts]

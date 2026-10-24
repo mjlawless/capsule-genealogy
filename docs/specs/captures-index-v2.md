@@ -258,6 +258,35 @@ Renderer changes only; the entry shape is unchanged, so this stays `captures-ind
   button, and each capture's "Local" line has "Open folder"; both call `POST /reveal`
   (token-gated), which opens the folder in the computer's file manager.
 
+### 4e. Choosing which captures to read with AI (added 2026-10-24)
+
+A capture saved without an API key (`manifest.extraction == "pending"`) waits to be read.
+The owner ruled that adding a key must not read them all: the user chooses. Renderer and
+backend changes only; the entry shape is unchanged, so this stays `captures-index/v2`.
+
+- **Waiting** means pending AND never superseded (`lifecycle.json` never recorded
+  `superseded`). The pending marker is sealed and never changes, so an original that a later
+  reading replaced is not waiting: it loses the "not read yet" chip, and its detail points to
+  the capture that replaces it. One read once and then reinstated (the reading rejected) is
+  not waiting either: its detail says the reading was set aside, and reading it again is not
+  offered yet. `GET /settings/status` `pending` counts waiting captures.
+- **AI reading filter** (`#f-read`, both pages), from each capture's `data-read`: `not read
+  yet` (waiting), `read`, or `file, not read` (a document capture, which is never read).
+  `#not-read` in the address selects "not read yet" (the popup links there).
+- **Served page only:** a tick box on each waiting capture (no other row has one), and, when
+  anything is waiting, a bar with **Read with AI**. It reads the ticked captures, or with
+  none ticked every waiting capture the filters show, after a confirmation listing them with
+  a rough cost and a note for subscription-site pages. It calls `POST /read`
+  `{capture_ids}` (token-gated): 400 without a key, 409 while a reading runs, 422 when none
+  is waiting; any capture that is not waiting is refused with its reason, never read again.
+  Progress comes from `GET /settings/status`; the page reloads when the reading ends, or
+  says what could not be read.
+- The popup no longer reads: its "Read them now" (`POST /settings/read-pending`, read
+  everything) is retired and answers 410 with a pointer to the index. `capsule extract --all`
+  stays, as an explicit request, and reads only waiting captures; `capsule extract <id>`
+  refuses one that is not waiting, so a capture is read at most once everywhere (owner,
+  2026-10-24).
+
 ## 5. Non-goals
 
 - **Not machine-parseable, and deliberately carries no embedded JSON payload.**

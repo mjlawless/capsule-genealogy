@@ -60,7 +60,7 @@ def test_transcribed_links_to_the_reading_only_on_the_served_page():
 
 def test_not_read_yet_says_what_to_do():
     html = render_index([_record(extraction_pending=True)], generated_at=_DT)
-    assert ">not read yet</span>" in html and "“Read them now”" in html
+    assert ">not read yet</span>" in html and "choose Read with AI" in html
     assert "extraction pending" not in html and "awaiting OCR" not in html
 
 

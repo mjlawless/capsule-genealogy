@@ -20,7 +20,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, Optional, Union
+from typing import Iterator, Optional, Sequence, Union
 
 from capsule.agent.base import Agent
 from capsule.capture.manifest import (
@@ -99,6 +99,69 @@ def pending_captures(captures_root: Union[str, Path]) -> list[str]:
     return found
 
 
+def waiting_captures(captures_root: Union[str, Path]) -> list[str]:
+    """Pending captures that were NEVER read: what the index offers to read.
+
+    Narrower than `pending_captures`: a capture whose reading was set aside (reinstated) is
+    pending again for `capsule extract`, an explicit request, but the index never offers to
+    read it a second time (owner, 2026-10-24: "not yet").
+    """
+    root = Path(captures_root)
+    return [c for c in pending_captures(root) if not _ever_superseded(root / c)]
+
+
+def choose_readable(
+    captures_root: Union[str, Path], capture_ids: Sequence[str]
+) -> tuple[list[str], list[tuple[str, str]]]:
+    """Split the captures a person chose into (readable, refused with a reason).
+
+    Readable means still waiting to be read: archived without a key and never replaced by a
+    reading, even one later set aside by a reinstatement. A capture that was read (with a key,
+    or later by `capsule extract`) is never read again from here (owner, 2026-10-24).
+    Duplicates are dropped; order is kept.
+    """
+    root = Path(captures_root)
+    readable: list[str] = []
+    refused: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for capture_id in capture_ids:
+        if capture_id in seen:
+            continue
+        seen.add(capture_id)
+        try:
+            folder = resolve_capture_folder(root, capture_id)
+            manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            refused.append((capture_id, "no such capture"))
+            continue
+        except (ValueError, OSError):
+            refused.append((capture_id, "not a capture this archive can read"))
+            continue
+        if not isinstance(manifest, dict) or manifest.get("extraction") != "pending":
+            refused.append((capture_id, "already read; reading it again is not offered"))
+        elif _currently_superseded(folder):
+            refused.append((capture_id, "already read: a newer capture holds its reading"))
+        elif _ever_superseded(folder):
+            refused.append(
+                (capture_id, "already read once (that reading was set aside); reading it "
+                 "again is not offered")
+            )
+        else:
+            readable.append(folder.name)
+    return readable, refused
+
+
+def _ever_superseded(folder: Path) -> bool:
+    """Was this capture ever replaced, even if it was reinstated since?"""
+    try:
+        events = json.loads((folder / LIFECYCLE_NAME).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return isinstance(events, list) and any(
+        isinstance(e, dict) and e.get("event") == "superseded" for e in events
+    )
+
+
 def _currently_superseded(folder: Path) -> bool:
     try:
         events = json.loads((folder / LIFECYCLE_NAME).read_text(encoding="utf-8"))
@@ -115,6 +178,10 @@ def extract_capture(
     agent: Agent,
 ) -> Extracted:
     """Read a pending capture into a new capture that supersedes it.
+
+    A capture is read at most once: one read before and then reinstated (the reading set
+    aside) is refused too, checked under the claim, so it is never paid for twice. Reading
+    again is not offered yet (owner ruling 2026-10-24, for the index page and the CLI alike).
 
     Raises `ValueError` if the capture is not pending (it was already read, or is a document
     capture, which has no page text to read) and `FileNotFoundError` if it does not exist.
@@ -141,6 +208,10 @@ def extract_capture(
         # Re-checked under the claim: another process may have finished meanwhile.
         if repository.superseded_by(source["id"]) is not None:
             raise ValueError(f"{capture_id} has already been read and replaced")
+        if any(
+            e["event"] == "superseded" for e in repository.lifecycle_for_source(source["id"])
+        ):
+            raise ValueError(f"{capture_id} was read before; reading it again is not offered")
         return _read(repository, root, folder, manifest, capture_id, agent)
 
 
@@ -329,7 +400,7 @@ def _update_ledger(
         ledger.close()
 
 
-# -- reading pending captures in the background (the popup's "Read them now", v0.2) ----------
+# -- reading chosen captures in the background (the index page's "Read with AI") ------------
 
 
 @dataclass
@@ -352,17 +423,30 @@ def background_status() -> BackgroundReading:
         return BackgroundReading(**vars(_background))
 
 
-def start_background_reading(
-    *, db_path: Union[str, Path], captures_root: Union[str, Path], agent: Agent
-) -> BackgroundReading:
-    """Read every pending capture on a worker thread; returns the state it started with.
+class ReadingBusy(RuntimeError):
+    """A background reading is already going; a second one is refused, not merged."""
 
-    A no-op returning the current state if a run is already going. Each capture is read with
-    the same `extract_capture` as `capsule extract`, so every safety it has applies here.
+
+def start_background_reading(
+    *,
+    db_path: Union[str, Path],
+    captures_root: Union[str, Path],
+    agent: Agent,
+    targets: Sequence[str],
+) -> BackgroundReading:
+    """Read the chosen captures on a worker thread; returns the state it started with.
+
+    The caller chooses (the index page's ticks, filtered by `choose_readable`): nothing is
+    read just because it is pending (owner, 2026-10-24). Raises `ReadingBusy` while another
+    run is going, so the page never claims to have started a reading it did not. Each capture
+    is read with the same `extract_capture` as `capsule extract`, which re-checks that it is
+    still waiting, so every safety it has applies here.
     """
-    targets = pending_captures(captures_root)
+    targets = list(dict.fromkeys(targets))
     with _background_lock:
-        if _background.running or not targets:
+        if _background.running:
+            raise ReadingBusy("Capsule is already reading captures; wait for it to finish.")
+        if not targets:
             return BackgroundReading(**vars(_background))
         _background.running, _background.total = True, len(targets)
         _background.done = _background.failed = 0

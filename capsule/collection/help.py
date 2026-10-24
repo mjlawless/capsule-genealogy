@@ -52,7 +52,8 @@ saved.</p>
 <p>With your own Anthropic API key (added under <b>Anthropic API key</b> in the popup and
 billed to you, roughly 8 to 9 US cents for a typical page), Capsule reads each page as you
 save it: who is named, and each fact about them. Without a key, pages are saved and marked
-<b>not read yet</b>; add a key later and choose <b>Read them now</b>.</p>
+<b>not read yet</b>. Add a key later, then choose which of them to read (see <b>Reading
+pages saved without a key</b> below): nothing is read until you say so.</p>
 <p>Every fact is linked to the words on the page it came from, and is marked as one of:</p>
 <dl>
 <dt>stated</dt><dd>the record says it.</dd>
@@ -75,13 +76,28 @@ serves, <b>Open folder</b> shows a capture's folder in Finder or File Explorer, 
 <dd>saved; read, with facts; checked or corrected by you.</dd>
 <dt>🔒</dt><dd>gated: from a sign-in or subscription site, and flagged as copyright. Don't
 share it.</dd>
-<dt>not read yet</dt><dd>saved without an API key.</dd>
+<dt>not read yet</dt><dd>saved without an API key; the <b>Read or not</b> filter shows
+these.</dd>
 <dt>incomplete</dt>
 <dd>the capture says it does not hold the record, for example a page whose scan image was
 not saved. Hover over it for the reason.</dd>
 <dt>superseded</dt><dd>a newer capture replaces this one; the old one is kept.</dd>
 <dt>↗ source</dt><dd>the page names the original document it was made from.</dd>
 </dl>
+
+<h2>Reading pages saved without a key</h2>
+<p>On the index Capsule serves (<code>http://127.0.0.1:8765/</code>, or <b>Choose which to
+read</b> in the popup), each page that is <b>not read yet</b> has a tick box.</p>
+<ol>
+<li>Tick the pages you want read. Or leave them all unticked and use the filters: with
+nothing ticked, the button reads every waiting page the list shows.</li>
+<li>Click <b>Read with AI</b>. It lists the pages and a rough cost (about 9 US cents a
+typical page, billed to your key); confirm to start.</li>
+<li>The bar shows progress, and the list refreshes when it is done.</li>
+</ol>
+<p>Each page is read from the copy on your computer, never the live site, and the reading
+becomes a new capture; the saved one is kept and marked replaced. A page is read once: one
+that was already read is not read again, here or with <code>capsule extract</code>.</p>
 
 <h2>Correcting what was read</h2>
 <p>When you open the index from Capsule itself
@@ -105,10 +121,11 @@ version of the reader can be checked against what you corrected.</p>
 the original reading; corrections are made, and shown, on the page Capsule serves.</p>
 
 <h2>Putting a capture into your family tree</h2>
-<p>Capsule does not connect to Gramps, RootsMagic, Family Tree Maker or an online tree yet;
+<p>Capsule does not write into Gramps, RootsMagic, Family Tree Maker or an online tree yet;
 a direct link to Gramps is planned. Until then you carry each capture across yourself, with
 an AI assistant's help or by hand. Every capture shows its citation, with <b>Copy</b>
-buttons, under <b>Citation</b>.</p>
+buttons, under <b>Citation</b>. If Claude is connected to your archive (see <b>Ask an AI
+about your archive</b> below), just ask it for help with a capture: no copying needed.</p>
 <h3>With an AI assistant (recommended)</h3>
 <ol>
 <li>Open the capture in the index and click <b>Copy for AI</b>. It copies the capture as
@@ -134,6 +151,35 @@ the page itself is <code>snapshot.html</code>).</li>
 <li>Enter each fact under the right person, with that citation, noting whether the record
 states it or it was calculated or estimated.</li>
 </ol>
+
+<h2>Ask an AI about your archive</h2>
+<p>Claude Desktop or Claude Code can read your archive directly and answer from it, citing
+the captures it used: "What do I have on Mary Kelly?", "Do my records agree on John
+Murphy's birth year?", "Does that index cover 1852?", "Help me enter this record in
+Gramps." It only reads: it cannot change your archive or your tree.</p>
+<ol>
+<li>Open a terminal in your Capsule folder and print the setup:
+<ul>
+<li>Mac: <code>cd ~/Capsule; uv run --project app capsule mcp --print-config</code></li>
+<li>Windows: <code>cd $env:LOCALAPPDATA\\Capsule; uv run --project app capsule mcp --print-config</code></li>
+</ul></li>
+<li>Follow what it prints: for Claude Desktop, paste the lines into its config file
+(Settings, then Developer, then Edit Config) and restart it; for Claude Code, run the
+<code>claude mcp add</code> line it shows.</li>
+<li>Ask away. To enter a capture in your tree, ask Claude to help you enter it (or use
+the <b>Enter a capture in my family tree</b> prompt); you make the entries.</li>
+</ol>
+<p>Good to know:</p>
+<ul>
+<li>Claude reads the captures it needs, including pages from subscription sites (they are
+marked, for your personal research only), and their text goes to Anthropic, as it does
+when Capsule reads a page. To keep those out, add <code>--exclude-gated</code> when you
+print the setup.</li>
+<li>Saved pages are untrusted text: one could contain words written to steer an AI. Be
+careful about also giving the same Claude tools that act (email, files, browsing).</li>
+<li>Claude is told never to decide that two records are the same person, and to say when
+a fact's words could not be found on the saved page; you decide.</li>
+</ul>
 
 <h2>Notes, deleting, and moving your archive</h2>
 <ul>

@@ -13,9 +13,72 @@
 // Download button produces (REQ-001). Classic (non-module) service worker, so:
 importScripts("render-pdf.js", "download-intercept.js");
 
+// REQ-013 §A: on a fresh install (not an update or a Chrome update), open the welcome tab. Most
+// people add the extension from the Chrome Web Store and would otherwise never learn that the
+// Capsule app is the other half. Registered at top level so the install event reaches it.
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details && details.reason === "install") {
+    chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") });
+  }
+});
+
 // Start listening for downloads immediately. The listener ignores everything that is not
 // an armed Ancestry download, so the researcher's own files are never touched.
 watchDownloads();
+
+// REQ-013 §C: the page scripts (media-detect.js + content.js: the on-page Capsule button, the
+// `capsule:capture` / `capsule:arm-download` events, the Ancestry viewer's auto-download) used to
+// be declared for <all_urls>, which put "Read and change all your data on all websites" on the
+// install dialog. They now run only on sites the user has granted: a site granted from the popup
+// for its record images, or every site when "Capsule button on every page, and keep site
+// downloads" is on. The popup's own Capture never needed them (it injects what it runs, under
+// activeTab).
+const PAGE_SCRIPT_ID = "capsule-page";
+const PAGE_SCRIPT_FILES = ["media-detect.js", "content.js"];
+
+// PURE (tested in node). The match patterns the page scripts get, from the host permissions
+// Chrome reports as granted: every web origin except the Capsule app's own (127.0.0.1), sorted
+// and without repeats, so an unchanged grant leaves the registration as it is.
+function pageScriptMatches(origins) {
+  const out = new Set();
+  for (const o of origins || []) {
+    if (typeof o !== "string") continue;
+    const m = /^(https?|\*):\/\/([^/]+)\//.exec(o);
+    if (!m) continue;
+    const host = m[2];
+    if (host === "127.0.0.1" || host.startsWith("127.0.0.1:") || host === "localhost" || host.startsWith("localhost:")) continue;
+    out.add(o);
+  }
+  return [...out].sort();
+}
+
+// Bring the registration in line with what is granted. Serialized: a grant can arrive while the
+// worker's start-up sync is still running, and two registrations of one ID throw.
+let pageScriptSync = Promise.resolve();
+function syncPageScripts() {
+  pageScriptSync = pageScriptSync.then(async () => {
+    const { origins } = await chrome.permissions.getAll();
+    const matches = pageScriptMatches(origins);
+    const existing = await chrome.scripting.getRegisteredContentScripts({ ids: [PAGE_SCRIPT_ID] });
+    if (!matches.length) {
+      if (existing.length) await chrome.scripting.unregisterContentScripts({ ids: [PAGE_SCRIPT_ID] });
+      return;
+    }
+    const script = { id: PAGE_SCRIPT_ID, matches, js: PAGE_SCRIPT_FILES, runAt: "document_idle" };
+    if (existing.length) await chrome.scripting.updateContentScripts([script]);
+    else await chrome.scripting.registerContentScripts([script]);
+  }).catch((err) => console.warn("Capsule: could not update the page scripts:", err));
+  return pageScriptSync;
+}
+
+syncPageScripts();
+chrome.permissions.onAdded.addListener((granted) => {
+  if (granted && (granted.permissions || []).includes("downloads")) watchDownloads();
+  syncPageScripts();
+});
+chrome.permissions.onRemoved.addListener(() => {
+  syncPageScripts();
+});
 
 const BACKEND = "http://127.0.0.1:8765/capture";
 const LEDGER_STARTED = "http://127.0.0.1:8765/ancestry/started";
@@ -341,6 +404,9 @@ function unknownFieldsIn(body) {
 }
 
 async function postAndShape(o) {
+  // REQ-015 §D: the full page goes LAST, and only if the capture stays inside the
+  // backend's limits, so it can never cost the record (render-pdf.js appendFullPage).
+  const fullPageSkipped = appendFullPage(o.media, o.render);
   const payload = {
     url: o.url,
     html: o.html,
@@ -484,6 +550,11 @@ async function postAndShape(o) {
     // What we suppressed for the print, so an unknown overlay caught by the heuristic
     // is visible rather than a silent change to what the archive contains.
     pdf_hid: render.hid || [],
+    // REQ-015: the full page (page.mhtml), and how many ads were hidden from it
+    // and from the PDF (owner 2026-10-29: hidden by default).
+    full_page: fullPageSkipped ? "skipped" : "attached",
+    full_page_skipped_reason: fullPageSkipped,
+    ads_hidden: (render.ads || []).length,
     // Fields this backend was too old to accept, dropped so the capture could land. Never
     // silent: the capture is real but missing an enhancement, and the operator has to know
     // which — otherwise a register capture with no `page_label` looks like a page with no
@@ -666,8 +737,46 @@ async function captureAncestryImage(msg, tabId) {
 // async reply (MV3 requirement). `sender.tab.id` is the tab we render to PDF — it
 // is the authoritative id of the page that asked to be captured, so a capture can
 // never render some other tab the user happens to be looking at.
+// REQ-013 §C: a page script stays in a tab that was already open when the user withdrew the
+// site (or turned off "Capsule button on every page"); Chrome only stops injecting it into new
+// pages. So every request from a page script is checked against what is granted NOW, and refused
+// in plain words if the site is no longer allowed (Codex review).
+const PAGE_MESSAGES = new Set(["capsule:arm-download", "capsule:capture", "capsule:capture-ancestry-image"]);
+const SITE_WITHDRAWN =
+  "Capsule is no longer allowed on this site, so nothing was captured. Click the Capsule icon " +
+  "to capture this page, or turn the page button back on in its Settings.";
+
+async function pageStillAllowed(sender) {
+  let origin = "";
+  try {
+    origin = new URL(sender.url).origin;
+  } catch (_e) {
+    return false;
+  }
+  if (!/^https?:/.test(origin)) return false;
+  try {
+    return await chrome.permissions.contains({ origins: [origin + "/*"] });
+  } catch (_e) {
+    return false;
+  }
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg) return;
+  if (sender && sender.tab && PAGE_MESSAGES.has(msg.type)) {
+    pageStillAllowed(sender).then((allowed) => {
+      if (!allowed) {
+        sendResponse({ ok: false, error: SITE_WITHDRAWN, reason: SITE_WITHDRAWN });
+        return;
+      }
+      handlePageMessage(msg, sender, sendResponse);
+    });
+    return true;
+  }
+  return handlePageMessage(msg, sender, sendResponse);
+});
+
+function handlePageMessage(msg, sender, sendResponse) {
   const tabId = sender && sender.tab ? sender.tab.id : null;
 
   // Arm BEFORE Ancestry's own Download control is clicked. This path holds no Ancestry
@@ -698,4 +807,4 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     captureAncestryImage(msg, tabId).then(sendResponse);
     return true;
   }
-});
+}

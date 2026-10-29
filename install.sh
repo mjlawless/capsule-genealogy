@@ -358,11 +358,22 @@ else
   say "To start it again later: \"$LAUNCHER\""
 fi
 say ""
-say "Already added Capsule to Chrome (from the Chrome Web Store)? Then you're done: click its"
-say "icon and it connects by itself. Otherwise, the last step, in Google Chrome:"
-say "  1. Open chrome://extensions and turn on Developer mode (top right)."
-say "  2. Click 'Load unpacked' and choose this folder:"
-say "       $APP/extension"
-say "  3. Pin the Capsule icon, open a record page, and click Capture."
+# REQ-013 §B: the last step is the Chrome Web Store, not Developer mode. On a first install the
+# store page opens by itself (in Chrome when it is there); an update or a CI run only prints it.
+STORE_URL="https://chromewebstore.google.com/detail/genealogy-capsule/dopmkpbopjegbdngekbdpgpkmpgkgeeo"
+say "Last step: add Genealogy Capsule to Google Chrome from the Chrome Web Store:"
+say "  $STORE_URL"
+say "Then pin the Capsule icon, open a record page, and click Capture. It connects by itself."
+say "(Already added it? Then you're done.)"
+if [ -z "$PREVIOUS" ] && [ -z "${CI:-}" ] && [ "${CAPSULE_NO_BROWSER:-}" != "1" ]; then
+  if [ "$(uname -s)" = "Darwin" ]; then
+    open -a "Google Chrome" "$STORE_URL" 2>/dev/null || open "$STORE_URL" 2>/dev/null || true
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$STORE_URL" >/dev/null 2>&1 || true
+  fi
+fi
+say ""
+say "Can't use the Chrome Web Store? In chrome://extensions, turn on Developer mode, click"
+say "'Load unpacked' and choose: $APP/extension"
 say ""
 say "No Anthropic key yet? That's fine: pages are archived now and can be read later."

@@ -26,7 +26,7 @@ states it. Everything here is read-only.
 title) and quote its citation when it matters.
 - Keep values exactly as written in `value_as_written`, and keep each fact's \
 evidence_type (stated, calculated, estimated).
-- A fact with `unverified: true` could not be found on the saved page: say so, and ask \
+- A fact with `unverified: true` could not be found in the page text: say so, and ask \
 the researcher to check the record before using it.
 - Never decide that two records name the same person. Present a possible match as a \
 possibility, with the evidence on each side, for the researcher to decide.
@@ -91,20 +91,29 @@ def build_server(settings: ConnectorSettings, archive: Optional[Archive] = None)
         return _answer(lambda: archive.get_capture(capture_id, include_history=include_history))
 
     @server.tool(title="Find people by name", annotations=_READ_ONLY)
-    def find_people(name: str, limit: int = 50) -> dict[str, Any]:
+    def find_people(name: str, limit: int = 50, offset: int = 0) -> dict[str, Any]:
         """Every person, as one record names them, whose name contains all the given
         words, with the capture they appear in. Records are never grouped: two entries
-        with the same name are two records, not one person."""
-        return _answer(lambda: archive.find_people(name, limit=limit))
+        with the same name are two records, not one person. Paged with limit (max 100)
+        and offset; `more` says whether another page follows."""
+        return _answer(lambda: archive.find_people(name, limit=limit, offset=offset))
 
     @server.tool(title="Check what an index covers", annotations=_READ_ONLY)
     def check_coverage(
-        place: Optional[str] = None, record_type: Optional[str] = None, year: Optional[int] = None
+        place: Optional[str] = None,
+        record_type: Optional[str] = None,
+        year: Optional[int] = None,
+        limit: int = 50,
+        offset: int = 0,
     ) -> dict[str, Any]:
         """What a record index says it covers (place, record type, years), from its own
         coverage pages that the researcher saved. Ask this before treating an empty search
-        as meaningful."""
-        return _answer(lambda: archive.check_coverage(place=place, record_type=record_type, year=year))
+        as meaningful. `place` matches part of the place as the coverage page wrote it
+        (usually a parish, not a county); `record_type` matches part of its wording.
+        Paged with limit (max 100) and offset; `more` says whether another page follows."""
+        return _answer(lambda: archive.check_coverage(
+            place=place, record_type=record_type, year=year, limit=limit, offset=offset,
+        ))
 
     @server.tool(title="Was this page saved?", annotations=_READ_ONLY)
     def was_captured(url: str) -> dict[str, Any]:
@@ -120,9 +129,9 @@ def build_server(settings: ConnectorSettings, archive: Optional[Archive] = None)
 
     if settings.page_text:  # owner ruling (REQ-012 §9.2): off unless the user turns it on
 
-        @server.tool(title="Read a saved page's text", annotations=_READ_ONLY)
+        @server.tool(title="Read a captured page's text", annotations=_READ_ONLY)
         def get_page_text(capture_id: str, max_chars: int = 20000) -> dict[str, Any]:
-            """The visible text of a capture's saved page, up to max_chars (1000-100000)."""
+            """The visible text of a captured page, up to max_chars (1000-100000)."""
             return _answer(lambda: archive.get_page_text(capture_id, max_chars=max_chars))
 
     @server.prompt(title="Enter a capture in my family tree")

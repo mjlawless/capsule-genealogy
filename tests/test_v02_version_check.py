@@ -15,16 +15,17 @@ from pathlib import Path
 import pytest
 
 _POPUP = Path(__file__).resolve().parent.parent / "extension" / "popup.js"
+_SHARED = _POPUP.parent / "setup-shared.js"
 
 needs_node = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 
-def _advice(app_version, extension_version):
-    source = _POPUP.read_text(encoding="utf-8")
+def _advice(app_version, extension_version, from_store=False):
+    source = _SHARED.read_text(encoding="utf-8")
     start = source.index("function versionAdvice(")
     body = source[start : source.index("\n}\n", start) + 3]
     script = body + f"\nconsole.log(JSON.stringify(versionAdvice({json.dumps(app_version)}, " \
-        f"{json.dumps(extension_version)})));"
+        f"{json.dumps(extension_version)}, {json.dumps(from_store)})));"
     proc = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=30)
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout)
@@ -50,6 +51,14 @@ def test_an_older_app_says_to_run_the_installer_again():
 def test_an_older_extension_says_to_reload_it():
     advice = _advice("0.2.1", "0.2.0")
     assert "extension (0.2.0) is older" in advice and "chrome://extensions" in advice
+
+
+@needs_node
+def test_an_older_store_copy_is_not_told_to_reload_a_folder():
+    """REQ-013 §F: Chrome updates the Web Store copy by itself; there is no folder to reload."""
+    advice = _advice("0.2.8", "0.2.7", from_store=True)
+    assert "extension (0.2.7) is older" in advice and "updates it by itself" in advice
+    assert "reload arrow" not in advice and "extension folder" not in advice
 
 
 @needs_node

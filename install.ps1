@@ -323,12 +323,20 @@ Write-Host ''
 Write-Host "Capsule is running (http://127.0.0.1:$Port)." -ForegroundColor Green
 if ($loginItem) { Write-Host 'It will also start by itself whenever you log on.' }
 Write-Host ''
-Write-Host "Already added Capsule to Chrome (from the Chrome Web Store)? Then you're done: click its"
-Write-Host 'icon and it connects by itself. Otherwise, the last step, in Google Chrome:'
-Write-Host '  1. Open chrome://extensions and turn on Developer mode (top right).'
-Write-Host "  2. Click 'Load unpacked' and choose this folder:"
-Write-Host "       $App\extension"
-Write-Host '  3. Pin the Capsule icon, open a record page, and click Capture.'
+# REQ-013 §B: the last step is the Chrome Web Store, not Developer mode. On a first install the
+# store page opens by itself (in Chrome when it is there); an update or a CI run only prints it.
+$StoreUrl = 'https://chromewebstore.google.com/detail/genealogy-capsule/dopmkpbopjegbdngekbdpgpkmpgkgeeo'
+Write-Host 'Last step: add Genealogy Capsule to Google Chrome from the Chrome Web Store:' -ForegroundColor Green
+Write-Host "  $StoreUrl"
+Write-Host 'Then pin the Capsule icon, open a record page, and click Capture. It connects by itself.'
+Write-Host '(Already added it? Then you are done.)'
+if (-not $hadCapsule -and -not $env:CI -and $env:CAPSULE_NO_BROWSER -ne '1') {
+    try { Start-Process chrome $StoreUrl -ErrorAction Stop }
+    catch { try { Start-Process $StoreUrl -ErrorAction Stop } catch { } }
+}
+Write-Host ''
+Write-Host "Can't use the Chrome Web Store? In chrome://extensions, turn on Developer mode, click"
+Write-Host "'Load unpacked' and choose: $App\extension"
 Write-Host ''
 Write-Host "No Anthropic key yet? That's fine: pages are archived now and can be read later."
 Release-Lock

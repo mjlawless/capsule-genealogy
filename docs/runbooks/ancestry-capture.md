@@ -1,5 +1,9 @@
 # Runbook — capturing an Ancestry record (REQ-001)
 
+> **Superseded (REQ-014).** For capturing from a browser agent today, follow
+> [`skills/genealogy-capsule/SKILL.md`](../../skills/genealogy-capsule/SKILL.md). This runbook
+> records how the REQ-001 flow was first built and set up.
+
 For the researcher, and for a browser assistant the researcher directs in their own logged-in tab. Implements
 `docs/specs/REQ-001_ancestry-record-support.md`.
 

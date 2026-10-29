@@ -211,6 +211,10 @@ async function armDownload(req) {
     return { ok: false, reason: "cannot arm: this page is not on the site it claims to be" };
   }
 
+  if (!chrome.downloads) {
+    return { ok: false, reason: DOWNLOADS_OFF };
+  }
+
   if (!(await fileAccessAllowed())) {
     return {
       ok: false,
@@ -309,7 +313,20 @@ function base64Of(buffer) {
  * The downloads listener. Ingests ONLY a download belonging to the armed record.
  * Everything else is ignored — the user's own downloads are none of our business.
  */
+// REQ-013 §C: said when a site download is armed before the user allowed Capsule to see downloads.
+const DOWNLOADS_OFF =
+  "Capsule can't see your downloads yet. Click the Capsule icon and, under Settings, turn on " +
+  '"Capsule button on every page, and keep site downloads", then retry.';
+
+// REQ-013 §C: `downloads` is optional, so `chrome.downloads` does not exist until the user turns
+// on the page button and site downloads (popup). Returns whether the listener is (now) attached;
+// background.js calls it again when the permission is granted. Attaches at most once.
+let downloadsWatched = false;
+
 function watchDownloads() {
+  if (downloadsWatched) return true;
+  if (!chrome.downloads) return false;
+  downloadsWatched = true;
   chrome.downloads.onChanged.addListener(async (delta) => {
     if (!delta.state || delta.state.current !== "complete") return;
 

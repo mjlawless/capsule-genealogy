@@ -96,6 +96,25 @@ Two things to expect:
   Chrome allows only one client to attach. The capture still succeeds, with its
   page snapshot and full extraction; the toast says the PDF was skipped and why.
   A render is an enhancement, never a gate.
+- **Ads are hidden** from the PDF and the full page (0.2.7), by the conventions ad
+  networks use (Google ad slots, `ad-` classes, frames from ad networks) and nothing
+  broader: an `<embed>` or `<iframe>` that shows a certificate is never touched. The page
+  you are looking at is put back as it was the moment the render finishes.
+
+## The full page (`page.mhtml`, 0.2.7)
+
+In the same debugger session, right after the PDF, Capsule saves the **full page**, the
+complete copy **as Chrome saves it** (`Page.captureSnapshot`, MHTML): the page with its stylesheets,
+pictures and fonts in one file, made from what the tab already loaded, so **no request is
+made to the site** (measured: a page whose server logged every request saw none during
+the snapshot). It is stored as `media/<n>-page.mhtml` with provenance `render:page-mhtml`,
+hashed like any other file, and is never taken for the record image. It is the last media
+item, and is left out (the toast says why) when it would push a capture past the
+backend's limits (25 files, 100 MiB), so it can never cost the record itself.
+
+Chrome will not display an MHTML file served over http, so the capture's page on the
+served index unpacks it into one page that loads nothing: **Open the full page** (in the index's details, or on the capture's own page). The
+file itself downloads from there and opens with a double-click in Chrome or Edge.
 
 ## Notes / limits
 

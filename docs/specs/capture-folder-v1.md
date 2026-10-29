@@ -269,6 +269,12 @@ genealogical term for that label, and is optional:
 
 ## 4a. `media[]` provenance array (added 2026-07-08, backward-compatible)
 
+> **Provenances the tool itself writes** (it made the bytes; `source_url` is null):
+> `render:page-pdf` (the page printed to PDF) and, since 0.2.7, `render:page-mhtml` (the
+> whole page as Chrome saves it, `media/<n>-page.mhtml`, `mime: multipart/related`; REQ-015
+> §D). Neither is ever the record image. Additive: the folder shape and `spec_version` are
+> unchanged.
+
 Evidence-grade capture must record *where each media file came from*, not just
 that its bytes hash to a value. The manifest therefore carries an optional
 top-level `media` array, one entry per `media/<n>-<slug>.<ext>` file, in the

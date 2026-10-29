@@ -24,6 +24,8 @@ evals/fixtures/**/media/
 # so never committed, wherever CAPSULE_DATA_DIR puts the archive (even the checkout itself).
 eval-fixtures/
 *.mhtml
+# The one exception: Chrome's MHTML of a synthetic local test page (no capture, no site).
+!tests/fixtures/mhtml/blink-sample.mhtml
 
 # Editor / OS
 .obsidian/

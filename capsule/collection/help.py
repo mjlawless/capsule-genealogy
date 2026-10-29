@@ -63,7 +63,7 @@ pages saved without a key</b> below): nothing is read until you say so.</p>
 <p>Values are copied exactly as written; anything illegible is shown as <code>[?]</code>.</p>
 
 <h2>This index</h2>
-<p>Each row is one saved page. Type in the filter box, or tick one or more record types
+<p>Each row is one captured page. Type in the filter box, or tick one or more record types
 or sites (and a status), to narrow the list; click a column heading to sort. Click a row
 to see the whole capture: its citation, notes, files and facts. Record types are grouped
 (Birth &amp; baptism, Marriage, Death &amp; burial, Census &amp; household, …); the exact
@@ -114,7 +114,7 @@ give the value, how the record supports it, and the words on the page that say i
 person the reading missed altogether cannot be added yet.)</dd>
 </dl>
 <p>A corrected fact shows a small <b>edited</b>, <b>added</b> or <b>retracted</b> tag.
-Corrections never change the saved page: they are kept beside it, so the original reading
+Corrections never change what was captured: they are kept beside it, so the original reading
 and every change remain visible. Each correction also becomes a test case, so a future
 version of the reader can be checked against what you corrected.</p>
 <p>The index file itself (<code>captures/index.html</code>) and an exported archive show
@@ -145,9 +145,10 @@ it: that is your call, under the site's terms.</p>
 <ol>
 <li>In your program, add a <b>source</b> from the capture's <b>Source list entry</b>, and a
 <b>citation</b> of it from the <b>Reference note</b>.</li>
-<li>Attach the saved page, and the record image when one was saved, as media:
-<b>Open folder</b> shows them (a PDF of the page and any image are in <code>media</code>;
-the page itself is <code>snapshot.html</code>).</li>
+<li>Attach the page PDF, and the record image when one was saved, as media:
+<b>Open folder</b> shows them (both are in <code>media</code>, with the <b>full page</b>,
+<code>page.mhtml</code>, the complete copy that opens in Chrome or Edge; the page text is
+<code>snapshot.html</code>).</li>
 <li>Enter each fact under the right person, with that citation, noting whether the record
 states it or it was calculated or estimated.</li>
 </ol>
@@ -175,10 +176,10 @@ the <b>Enter a capture in my family tree</b> prompt); you make the entries.</li>
 marked, for your personal research only), and their text goes to Anthropic, as it does
 when Capsule reads a page. To keep those out, add <code>--exclude-gated</code> when you
 print the setup.</li>
-<li>Saved pages are untrusted text: one could contain words written to steer an AI. Be
+<li>Captured pages are untrusted text: one could contain words written to steer an AI. Be
 careful about also giving the same Claude tools that act (email, files, browsing).</li>
 <li>Claude is told never to decide that two records are the same person, and to say when
-a fact's words could not be found on the saved page; you decide.</li>
+a fact's words could not be found in the page text; you decide.</li>
 </ul>
 
 <h2>Notes, deleting, and moving your archive</h2>

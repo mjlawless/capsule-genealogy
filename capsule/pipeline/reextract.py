@@ -12,6 +12,7 @@ access date, because that is when the page was seen; only the reading is new.
 from __future__ import annotations
 
 import json
+import logging
 import re
 import os
 import threading
@@ -25,12 +26,27 @@ from typing import Iterator, Optional, Sequence, Union
 from capsule.agent.base import Agent
 from capsule.capture.manifest import (
     LIFECYCLE_NAME,
+    Extraction,
     MediaItem,
     Redaction,
     resolve_capture_folder,
+    serialize_extraction,
+    sha256_hex,
     verify_capture,
+    write_result_json,
 )
-from capsule.contracts.evidence import GatingStatus
+from capsule.contracts.evidence import (
+    ArchiveRecord,
+    Assertion,
+    Citation,
+    CoverageClaim,
+    ExternalRef,
+    GatingStatus,
+    Persona,
+    ProviderClaim,
+    Snippet,
+    Source,
+)
 from capsule.pipeline.ancestry import record_ids_from_url
 from capsule.pipeline.fetch import ProvidedContentFetcher
 from capsule.pipeline.pipeline import CaptureOutcome, run_capture
@@ -40,6 +56,8 @@ from capsule.store.ledger import AncestryLedger
 from capsule.store.repository import Repository
 
 #: A claim older than this is a crashed run's, not a live one.
+_logger = logging.getLogger(__name__)
+
 _CLAIM_TTL_S = 3600
 
 #: `media/<n>-<slug>.<ext>` as the writer names it.
@@ -254,7 +272,8 @@ def _read(
     # Every step below is resumable, in this order, so an interruption anywhere is finished by
     # simply asking again (Codex review): (1) the replacement folder AND its database rows,
     # (2) the Ancestry ledger, (3) the supersession, last, because it is what marks the job
-    # done. A replacement folder whose rows never landed is moved to the trash and re-read.
+    # done. A replacement folder whose rows never landed is indexed from its own files, so a
+    # reading already paid for is not paid for again; only one that cannot be is re-read.
     replacement = _unfinished_replacement(repository, root, capture_id, source["id"])
     outcome: Optional[CaptureOutcome] = None
     if replacement is None:
@@ -316,7 +335,11 @@ def _unfinished_replacement(
 
     A replacement that WAS applied and then reinstated away was rejected by a person, and is
     never brought back (Codex review); the next run reads afresh. A replacement whose
-    database rows never landed is moved to the trash.
+    database rows never landed (the model answered, then the database write failed) is
+    indexed from its own files, so the reading is not paid for twice; if that write fails
+    again the error propagates and the folder waits for the next retry. Only a reading that
+    is damaged, or whose files cannot be turned back into exactly what was written, is moved
+    to the trash and read again, as before.
     """
     applied = {
         e["superseded_by"]
@@ -331,13 +354,34 @@ def _unfinished_replacement(
         if not isinstance(manifest, dict) or manifest.get("extracted_from") != capture_id:
             continue
         folder = manifest_path.parent
-        if not _indexed(repository, folder):
-            trash_capture(root, folder.name)
-            continue
         if (manifest.get("source") or {}).get("id") in applied:
             continue  # applied once, then rejected by a reinstatement
         check = verify_capture(folder)
-        if check.missing or check.mismatched or check.extra:
+        damaged = bool(check.missing or check.mismatched or check.extra)
+        if not _indexed(repository, folder):
+            # Verified FIRST: a damaged folder must never reach the database.
+            rebuilt = None if damaged else _rebuild_from_folder(folder, manifest)
+            if rebuilt is None:
+                trash_capture(root, folder.name)
+                continue
+            # A database failure here propagates and leaves the folder for the next retry:
+            # the reading is intact, so trashing it would only pay for it again (Codex review).
+            repository.add_capture(**rebuilt)
+            # The capture stopped before its `result.json`; write it as `run_capture` would,
+            # so the index shows its verdict instead of "unknown". Best-effort, like there.
+            try:
+                write_result_json(
+                    folder,
+                    record_type=rebuilt["source"].record_type,
+                    image_status=manifest.get("image"),
+                    assertion_count=len(rebuilt["assertions"]),
+                    persona_count=len(rebuilt["personas"]),
+                    verify_ok=check.ok,
+                    verify_shortfall=check.insufficient,
+                )
+            except Exception as exc:  # noqa: BLE001 — best-effort projection, never fatal
+                _logger.warning("could not write result.json for %s: %s", folder.name, exc)
+        elif damaged:
             # Never let a damaged reading replace an intact original (Codex review).
             raise ValueError(
                 f"an earlier reading of {capture_id} ({folder.name}) no longer matches its own "
@@ -345,6 +389,54 @@ def _unfinished_replacement(
             )
         return folder
     return None
+
+
+def _rebuild_from_folder(folder: Path, manifest: dict) -> Optional[dict]:
+    """The `add_capture` arguments for a written capture whose rows never landed, or None.
+
+    Only when the files turn back into exactly what was written: `extraction.json` must
+    re-serialize to the bytes its `content_hash` names, and `citation.json` to the same
+    JSON. Anything else is None, and the caller reads the capture again rather than index a
+    guess. Indexing itself is one `add_capture` transaction, as at capture time.
+    """
+    try:
+        raw = json.loads((folder / "extraction.json").read_text(encoding="utf-8"))
+        cited = json.loads((folder / "citation.json").read_text(encoding="utf-8"))
+        source = Source.model_validate({
+            **manifest["source"],
+            "archive": ArchiveRecord.model_validate(manifest["archive"]),
+            "spec_version": manifest["spec_version"],
+        })
+        extraction = Extraction(
+            personas=tuple(Persona.model_validate(p) for p in raw.get("personas") or ()),
+            snippets=tuple(Snippet.model_validate(s) for s in raw.get("snippets") or ()),
+            assertions=tuple(Assertion.model_validate(a) for a in raw.get("assertions") or ()),
+            external_refs=tuple(
+                ExternalRef.model_validate(r) for r in raw.get("external_refs") or ()
+            ),
+            coverage=tuple(CoverageClaim.model_validate(c) for c in raw.get("coverage") or ()),
+            provider_claims=tuple(
+                ProviderClaim.model_validate(p) for p in raw.get("provider_claims") or ()
+            ),
+            notes=raw.get("notes"),
+        )
+        citation = Citation.model_validate(cited)
+        if sha256_hex(serialize_extraction(extraction)) != source.content_hash:
+            raise ValueError("extraction.json does not re-serialize to its content_hash")
+        if citation.model_dump(mode="json") != cited:
+            raise ValueError("citation.json does not round-trip")
+    except Exception as exc:  # noqa: BLE001 — any doubt means "read it again", never a guess
+        _logger.warning("could not rebuild %s from its files, reading again: %s", folder.name, exc)
+        return None
+    return {
+        "source": source,
+        "citation": citation,
+        "personas": extraction.personas,
+        "snippets": extraction.snippets,
+        "assertions": extraction.assertions,
+        "coverage": extraction.coverage,
+        "provider_claims": extraction.provider_claims,
+    }
 
 
 def _readings_of(root: Path, capture_id: str) -> set[str]:

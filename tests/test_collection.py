@@ -411,8 +411,8 @@ def test_write_index_renders_a_row_and_detail_with_links(tmp_path):
     assert 'href="https://example.test/death/1"' in html
     assert 'href="./20260708-example-018f0000/"' in html
     # Learned details table.
-    assert "<td>death_date</td>" in html
-    assert "<td>1903-01-19</td>" in html
+    assert "<td>death_<wbr>date</td>" in html  # a field name may wrap after an underscore
+    assert '<td class="val">1903-01-19</td>' in html
 
 
 def test_index_is_self_contained_and_works_without_javascript(tmp_path):
@@ -562,6 +562,32 @@ def test_read_all_puts_a_capture_with_no_timestamp_last(tmp_path):
     assert records[-1].capture_id == "20990101-undated-018f0000"
 
 
+def test_the_detail_pane_fits_its_corrections_and_can_be_resized(tmp_path):
+    """The ✎/✕ column sat past the pane's edge: one long value or field name widened the
+    fact table. Values may break anywhere, field names after an underscore, and a divider
+    lets the reader trade width between the index and the detail, within limits."""
+    from capsule.collection.assets import INDEX_CSS, INDEX_JS
+
+    _make_capture(
+        tmp_path,
+        source_id="018f0000aaaa",
+        url="https://example.test/1",
+        site_name="records.example.gov",
+        record_type="death",
+        persona_label="Mary Doyle",
+        fields=[("number_of_household", "https://example.test/a-very-long-value")],
+    )
+    html = write_index(tmp_path, now=lambda: _DT).read_text(encoding="utf-8")
+    assert "<td>number_<wbr>of_<wbr>household</td>" in html
+    assert '<td class="val">https://example.test/a-very-long-value</td>' in html
+    assert "<code>records.<wbr>example.<wbr>gov</code>" in html
+    assert ".assertions td.val{overflow-wrap:anywhere}" in INDEX_CSS
+    # The index keeps the width its own columns need; the detail never drops below 29rem.
+    assert "minmax(min-content,1fr) 1.25rem" in INDEX_CSS
+    assert "minmax(29rem,clamp(29rem,var(--pane-w,34rem)" in INDEX_CSS
+    assert 'setAttribute("role", "separator")' in INDEX_JS and "--pane-w" in INDEX_JS
+
+
 def test_index_shows_the_captured_time_not_just_the_date(tmp_path):
     """Access time is part of the citation; the folder id carries only the date."""
     _make_capture(
@@ -574,7 +600,8 @@ def test_index_shows_the_captured_time_not_just_the_date(tmp_path):
         fields=[("name", "Mary Doyle")],
     )
     html = write_index(tmp_path, now=lambda: _DT).read_text(encoding="utf-8")
-    assert "2026-07-08 14:32 UTC" in html
+    # The date and time are kept whole but may wrap apart in a narrow index.
+    assert "<span>2026-07-08</span> <span>14:32 UTC</span>" in html
     # ...and the sort key keeps full ISO precision, so two captures made on one
     # day order correctly rather than tying.
     assert 'data-date="2026-07-08T14:32:05Z"' in html

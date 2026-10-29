@@ -110,11 +110,11 @@ citations, notes) is always in clearly named fields (§7.3).
 |---|---|---|
 | `search_captures` | "what do I have on…" | Capture summaries matching words in names, facts, citations, notes and sites, with optional filters: record category, site, date range, gated or not. Paged (default 20). |
 | `get_capture` | everything about one capture | Its citation (reference note, source-list entry, access date, URL), record type and category, site, captured date, gating, status, the persons named (each with role), every **current** fact (person, field, value exactly as written, evidence type, the record's supporting words, and whether it was corrected), the researcher's notes (marked as notes, not evidence), files in the folder, verification status, and any replacement capture. |
-| `find_people` | "who named X appears where" | Every **persona** (a person as one record names them) whose name matches, each with its capture and role. Never grouped across records (§7.1). |
-| `check_coverage` | "does that index cover 1852?" | What a site's index **says it covers**, from its captured coverage pages (`capsule coverage`), with the citation of the coverage page. |
+| `find_people` | "who named X appears where" | Every **persona** (a person as one record names them) whose name matches, each with its capture and role. Never grouped across records (§7.1). Paged like `search_captures` (`limit` max 100, `offset`, `total`, `more`; BUG-025). |
+| `check_coverage` | "does that index cover 1852?" | What a site's index **says it covers**, from its captured coverage pages (`capsule coverage`), with the citation of the coverage page. `place` matches part of the place as written (usually a parish). Paged like `search_captures` (BUG-025). |
 | `was_captured` | "have I already saved this page?" | The pre-capture check (`capsule query`, capsule-db-v1 §2) for a URL. |
 | `get_transcript` | "what does this scanned certificate say?" | The newest vision transcript of a capture's scan (REQ-006): fields, values, and those flagged for review. |
-| `get_page_text` (*off by default, §9*) | "what else does that page say?" | The saved page's text, capped in length. |
+| `get_page_text` (*off by default, §9*) | "what else does that page say?" | The captured page's text, capped in length. |
 
 Facts and records come out **the way the served index shows them**: built through
 `overlay_corrections`, so a corrected value is the current one, and a retracted fact is left

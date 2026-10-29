@@ -166,6 +166,18 @@
           rel="noopener noreferrer">Choose which to read ↗</a>
       </div>
     </details>
+    <!-- REQ-013 §C: the on-page button and site downloads are opt-in, so the install dialog no
+         longer asks for every site and the downloads list. Chrome asks when this is turned on. -->
+    <details id="page-settings">
+      <summary>Settings</summary>
+      <div class="row">
+        <input id="page-everywhere" type="checkbox" />
+        <label for="page-everywhere">Capsule button on every page, and keep site downloads</label>
+      </div>
+      <div class="row note">Shows a small Capsule button on the pages you visit, and keeps the
+        file you download with a site's own Download button as the record image. Chrome will
+        ask to let Capsule read pages on all sites and see your downloads.</div>
+    </details>
     <pre id="result">Saves the page you are viewing into Capsule on this computer.</pre>
     <div class="row footer">
       <a id="index-link" href="http://127.0.0.1:8765/" target="_blank" rel="noopener noreferrer"
@@ -175,6 +187,7 @@
     </div>
     <!-- Defines renderPagePdf() for popup.js; must load first. -->
     <script src="render-pdf.js"></script>
+    <script src="setup-shared.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

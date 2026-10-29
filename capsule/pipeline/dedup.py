@@ -43,6 +43,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from capsule.capture.manifest import verify_capture
 from capsule.pipeline.ancestry import IdPair, parse_apid, record_ids_from_url
+from capsule.pipeline.page_identity import accepted_page_label
 
 _logger = logging.getLogger(__name__)
 
@@ -273,8 +274,15 @@ def _scan_captures(
         # Ancestry, None is the record's default image — every capture on disk today.
         m_label = (manifest.get("source") or {}).get("page_label")
         if ids is not None:
+            # An Ancestry label is kept as stored: the manifest does not say whether the
+            # request named its record, and a held extra image (REQ-009) read as label-less
+            # would block the record's default image, a false block.
             matched = record_ids_from_url(m_url) == ids and m_label == page_label
         else:
+            # BUG-026: a label held from before BUG-019 ("Select Language" on NYC) faces the
+            # same filter a new request does, so junk compares as no label and the page is
+            # recognised. The manifest keeps what was read; only the comparison changes.
+            m_label = accepted_page_label(m_url, m_label)
             matched = _normalize_url(m_url) == target and m_label == page_label
         if not matched:
             continue

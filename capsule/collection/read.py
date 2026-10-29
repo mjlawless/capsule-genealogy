@@ -91,7 +91,7 @@ class AssertionView:
     corrections: tuple[CorrectionView, ...] = ()
     #: The words on the page that support the fact (its snippet), shown when correcting it.
     snippet: str | None = None
-    #: Capsule could not find the supporting words on the saved page when it built the
+    #: Capsule could not find the supporting words in the page text when it built the
     #: capture (`[unverified: …]` in the annotation): the value may not be on the record.
     unverified: bool = False
 

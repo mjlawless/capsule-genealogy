@@ -78,8 +78,9 @@ def _page(client) -> str:
 def _row(page: str, field: str) -> str:
     """The served page's `<tr>` for one fact (the detail block, not the summary row)."""
     # re.S: a correction tag's tooltip holds one line per correction.
-    rows = re.findall(r"<tr[^>]*><td>[^<]*</td><td>" + re.escape(field) + r"</td>.*?</tr>", page,
-                      re.S)
+    # The field name may wrap after an underscore (`death_<wbr>date`).
+    cell = re.escape(field.replace("_", "_<wbr>"))
+    rows = re.findall(r"<tr[^>]*><td>[^<]*</td><td>" + cell + r"</td>.*?</tr>", page, re.S)
     assert len(rows) == 1, rows
     return rows[0]
 
@@ -176,7 +177,7 @@ def test_an_added_fact_is_listed_last_with_its_persona(served):
     assert row.startswith("<tr") and "<td>Mary Kelly</td>" in row
     assert _tag(row)[0] == "added" and _id(row) == added["assertion_id"]
     assert _history(row)[0].startswith("added “71” · owner")
-    assert page.index("burial_place") < page.index("age_at_death")
+    assert page.index("burial_<wbr>place") < page.index("age_<wbr>at_<wbr>death")
 
 
 def test_a_folder_fact_missing_from_the_database_gets_no_id(served):

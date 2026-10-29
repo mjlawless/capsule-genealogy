@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Welcome to Genealogy Capsule</title>
+    <!-- REQ-013 §A: opened once, when the extension is installed (background.js). Most people
+         add the extension from the Chrome Web Store and never learn there is a second half, so
+         this page names it, offers the installer for this computer, and turns green by itself
+         when the Capsule app answers. No remote code; the only request is to the app's /health. -->
+    <style>
+      :root {
+        --ink: #1f2328;
+        --muted: #57606a;
+        --line: #d0d7de;
+        --bg: #ffffff;
+        --panel: #f6f8fa;
+        --accent: #3b2f80;
+        --ok: #1a7f37;
+        --ok-bg: #dafbe1;
+        --warn-bg: #fff8c5;
+        --warn-line: #d4a72c;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --ink: #e6edf3;
+          --muted: #9198a1;
+          --line: #3d444d;
+          --bg: #0d1117;
+          --panel: #151b23;
+          --accent: #a99cf0;
+          --ok: #3fb950;
+          --ok-bg: #12261e;
+          --warn-bg: #2e2a12;
+          --warn-line: #9e6a03;
+        }
+      }
+      [hidden] {
+        display: none !important;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font: 16px/1.55 system-ui, sans-serif;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 32px 16px 64px;
+      }
+      h1 {
+        font-size: 28px;
+        margin: 0 0 8px;
+      }
+      .lead {
+        font-size: 19px;
+        margin: 0 0 28px;
+      }
+      ol.steps {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 32px;
+      }
+      ol.steps > li {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 16px 18px;
+        margin-bottom: 14px;
+        background: var(--panel);
+      }
+      ol.steps > li.current {
+        border: 2px solid var(--accent);
+      }
+      ol.steps > li.done {
+        background: var(--ok-bg);
+        border-color: var(--ok);
+      }
+      .step-head {
+        font-size: 19px;
+        font-weight: 650;
+        margin: 0 0 6px;
+      }
+      .mark {
+        display: inline-block;
+        min-width: 1.6em;
+      }
+      li.done .mark {
+        color: var(--ok);
+      }
+      a.button {
+        display: inline-block;
+        padding: 12px 20px;
+        border-radius: 8px;
+        background: var(--ok);
+        color: #fff;
+        font-weight: 650;
+        font-size: 17px;
+        text-decoration: none;
+      }
+      pre {
+        white-space: pre-wrap;
+        word-break: break-all;
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 8px;
+        font-size: 13px;
+      }
+      button {
+        padding: 6px 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .banner {
+        background: var(--warn-bg);
+        border: 1px solid var(--warn-line);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 20px;
+      }
+      h2 {
+        font-size: 20px;
+        margin: 36px 0 10px;
+      }
+      dl dt {
+        font-weight: 650;
+        margin-top: 14px;
+      }
+      dl dd {
+        margin: 4px 0 0;
+      }
+      a {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Welcome to Genealogy Capsule</h1>
+      <p class="lead">
+        Capsule has <strong>two parts</strong>: this Chrome extension, and the free Capsule app
+        that keeps your archive on your own computer. <span id="lead-next">You've added the
+        first. One more step:</span>
+      </p>
+
+      <div id="version-banner" class="banner" hidden></div>
+
+      <ol class="steps">
+        <li class="done">
+          <p class="step-head"><span class="mark">✔</span>Step 1: add the extension to Chrome</p>
+          <p class="muted">Done.</p>
+        </li>
+
+        <li id="step-app" class="current">
+          <p class="step-head"><span class="mark" id="app-mark">2</span><span id="app-title">Step 2: install the Capsule app</span></p>
+          <div id="app-install">
+            <p id="setup-body"></p>
+            <p><a id="setup-download" class="button"></a></p>
+            <p id="setup-steps"></p>
+            <details id="setup-command-box">
+              <summary id="setup-command-summary">Prefer a command?</summary>
+              <p id="setup-where"></p>
+              <pre id="setup-command"></pre>
+              <button id="setup-copy" type="button">Copy command</button>
+            </details>
+            <p><a id="setup-docs" target="_blank" rel="noopener noreferrer">Step-by-step instructions ↗</a></p>
+            <p id="setup-wait" class="muted">Waiting for the Capsule app… this page changes by itself once it's running.</p>
+          </div>
+          <p id="app-done" hidden>The Capsule app is running on this computer.</p>
+        </li>
+
+        <li id="step-use">
+          <p class="step-head"><span class="mark">3</span>Step 3: capture a record</p>
+          <p>
+            Click the puzzle piece in Chrome's toolbar and pin <strong>Genealogy Capsule</strong>.
+            Then open a record page and click the Capsule icon, then <strong>Capture this
+            page</strong>. The first click connects the extension to the app by itself.
+          </p>
+          <p class="muted">
+            Your collection is at <a href="http://127.0.0.1:8765/" target="_blank" rel="noopener noreferrer">http://127.0.0.1:8765/</a>
+            while the app is running.
+          </p>
+        </li>
+      </ol>
+
+      <h2>About the warnings Chrome showed you</h2>
+      <p>
+        Chrome describes every extension's permissions in its own broad, standard words, not
+        the developer's. Here is what each one means for Capsule.
+      </p>
+      <dl>
+        <dt>"Read and change all your data on all websites" and "Access the page debugger backend"</dt>
+        <dd>
+          Capsule saves a PDF and a full copy of the page you capture with Chrome's own print
+          and save tools, and Chrome only lets an extension use those through its debugger,
+          which it describes this broadly. Capsule uses it on one tab, only when you click
+          Capture, hides the page's ads for that moment, and puts the page back and lets go as
+          soon as the copies are made. It never changes your data on any site.
+        </dd>
+        <dt>"Proceed with caution: this extension is not trusted by Enhanced Safe Browsing"</dt>
+        <dd>
+          You see this only if you have turned on Chrome's Enhanced Safe Browsing. It reflects
+          how long the developer has been publishing on the Chrome Web Store, not anything the
+          extension does: Google treats new developers this way for their first few months.
+          Capsule is open source, so anyone can
+          <a href="https://github.com/mjlawless/capsule-genealogy" target="_blank" rel="noopener noreferrer">read exactly what it does</a>.
+        </dd>
+        <dt>Later, Chrome may ask about a site</dt>
+        <dd>
+          When a record image has to be saved from a site, Capsule asks Chrome for that one site,
+          and Chrome shows you the question. Nothing else is asked for at install.
+        </dd>
+        <dt>Optional: the Capsule button on every page, and site downloads</dt>
+        <dd>
+          Under <strong>Settings</strong> in the Capsule popup you can turn on a small Capsule
+          button on every page and let Capsule keep the file you download with a site's own
+          Download button. Chrome then asks to let Capsule read pages on all sites and see your
+          downloads. Capsule looks at downloads only during the few seconds after you start a
+          capture. Where Capsule offers a one-click image capture, starting it has Capsule press
+          the site's own Download button for that one record; otherwise it never starts one.
+        </dd>
+      </dl>
+      <p>
+        What the extension captures goes only to the Capsule app on your computer. There are no
+        accounts and no Capsule servers. If you add your own AI key, the pages you choose to
+        have read are sent to Anthropic for reading, and nowhere else.
+      </p>
+    </main>
+    <script src="setup-shared.js"></script>
+    <script src="welcome.js"></script>
+  </body>
+</html>

@@ -57,8 +57,23 @@ input{flex:1 1 18rem;min-width:11rem}
 
 .wrap{display:grid;grid-template-columns:minmax(0,1fr);gap:1.25rem;
   padding:1.25rem;align-items:start}
-.js .wrap{grid-template-columns:minmax(0,1fr) 26rem}
-@media (max-width:900px){.js .wrap{grid-template-columns:minmax(0,1fr)}}
+/* With JS: index | divider | detail. The detail opens wide enough for a fact table's
+   ✎/✕ column; dragging the divider sets --pane-w. Limits, so no width hides either side:
+   the detail never narrower than 29rem (✎/✕ still show at 27rem with a 17px scrollbar) and the index never narrower than
+   its own columns need (min-content), nor than 34rem. When the window is too narrow for
+   the width asked for, the detail gives way first, down to its 29rem. */
+.js .wrap{grid-template-columns:minmax(min-content,1fr) 1.25rem
+  minmax(29rem,clamp(29rem,var(--pane-w,34rem),calc(100vw - 39rem)));column-gap:0}
+.split{display:none}
+.js .split{display:block;align-self:stretch;position:relative;cursor:col-resize;
+  touch-action:none}
+.js .split::before{content:"";position:absolute;top:0;bottom:0;left:50%;width:1px;
+  background:var(--line)}
+.js .split:hover::before,.js .split:focus-visible::before,body.resizing .split::before{
+  width:3px;margin-left:-1px;background:var(--accent)}
+.split:focus-visible{outline:none}
+body.resizing{cursor:col-resize;user-select:none}
+@media (max-width:900px){.js .wrap{grid-template-columns:minmax(0,1fr)}.js .split{display:none}}
 
 table{width:100%;border-collapse:collapse}
 #captures{font-size:.9rem}
@@ -77,6 +92,13 @@ tbody[hidden]{display:none}
 .js tbody.selected .row{background:var(--accent-bg)}
 .js tbody.selected .row>td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
 .rowlink{text-decoration:none;font-weight:600}
+/* So the index fits its side of the divider, the capture time may drop "01:06 UTC" under
+   its date (the row wraps each in a span), as a site name may wrap after a dot. A box
+   capped at 9rem also caps what one long word (`historicalvitalrecords`) asks of the
+   column; such a word breaks at the edge instead. */
+#captures .row code{display:inline-block;max-width:9rem;overflow-wrap:break-word}
+#captures .row .stamp{white-space:normal}
+#captures .row .stamp>span{white-space:nowrap}
 .js .detail{display:none}
 .detail>td{padding:.2rem .6rem 1.4rem}
 
@@ -90,6 +112,9 @@ tbody[hidden]{display:none}
 .cite{font-size:.8rem;margin:.3rem 0}
 .cite-label{display:block;font-size:.68rem;color:var(--muted);text-transform:uppercase}
 .cite-text{user-select:all}
+/* A citation or note can hold a long URL with no spaces: let it wrap rather than widen
+   the pane past its ✎/✕ column. */
+.cite,.d-ref{overflow-wrap:anywhere}
 .copy,.copy-ai{font:inherit;font-size:.72rem;color:var(--accent);cursor:pointer;margin-left:.4rem;
   padding:.1rem .45rem;border:1px solid var(--line);border-radius:5px;background:transparent}
 .copy-ai{margin-left:0;font-weight:600}
@@ -146,6 +171,10 @@ aside:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
    split into `death_dat / e`. Only genuinely unfittable tokens break. */
 .assertions td{padding:.25rem .4rem;border-bottom:1px solid var(--line);
   vertical-align:top;overflow-wrap:break-word}
+/* Except the value: a table sizes columns by their longest unbreakable word, so one long
+   value (a URL) widened the table and pushed ✎/✕ out of the pane. `anywhere` lets the
+   value column narrow; it still breaks only at the edge, after spaces are used up. */
+.assertions td.val{overflow-wrap:anywhere}
 .empty-note,.empty{color:var(--muted);font-style:italic}
 .empty-note{font-size:.8rem;margin:.9rem 0 0}
 .empty{text-align:center;padding:3rem 0}
@@ -331,6 +360,69 @@ INDEX_JS = """\
     }
   }
 
+  // The divider between the index and the detail: drag it, or focus it and use the arrow
+  // keys, to give either side more room; double-click puts it back. CSS (`.js .wrap`) keeps
+  // the width inside its limits, and this browser remembers it.
+  var wrap = pane.parentNode;
+  var split = document.createElement("div");
+  var WIDTH_KEY = "capsule.index.paneWidth";
+  split.className = "split";
+  split.tabIndex = 0;
+  split.title = "Drag to resize. Double-click to reset.";
+  split.setAttribute("role", "separator");
+  split.setAttribute("aria-orientation", "vertical");
+  split.setAttribute("aria-controls", "detail");
+  split.setAttribute("aria-label", "Resize the detail pane");
+  wrap.insertBefore(split, pane);
+  function paneWidth() { return pane.getBoundingClientRect().width; }
+  function setWidth(px) {
+    if (px === null) wrap.style.removeProperty("--pane-w");
+    else wrap.style.setProperty("--pane-w", Math.round(px) + "px");
+  }
+  function settle(reset) {
+    // Store the width the limits allowed, not the one asked for, so a drag past a limit
+    // doesn't leave a dead zone the next time.
+    setWidth(reset ? null : paneWidth());
+    split.setAttribute("aria-valuenow", String(Math.round(100 * paneWidth() / wrap.clientWidth)));
+    try {
+      if (reset) localStorage.removeItem(WIDTH_KEY);
+      else localStorage.setItem(WIDTH_KEY, String(Math.round(paneWidth())));
+    } catch (e) { /* storage blocked (a file:// page, private window): lasts until reload */ }
+  }
+  try {
+    var saved = parseInt(localStorage.getItem(WIDTH_KEY), 10);
+    if (saved > 0) setWidth(saved);
+  } catch (e) { /* no stored width: the default */ }
+  split.setAttribute("aria-valuenow", String(Math.round(100 * paneWidth() / wrap.clientWidth)));
+  split.addEventListener("pointerdown", function (event) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    var startX = event.clientX;
+    var start = paneWidth();
+    split.setPointerCapture(event.pointerId);
+    document.body.classList.add("resizing");
+    function move(e) { setWidth(start + startX - e.clientX); }
+    function done() {
+      split.removeEventListener("pointermove", move);
+      split.removeEventListener("pointerup", done);
+      split.removeEventListener("pointercancel", done);
+      document.body.classList.remove("resizing");
+      settle(false);
+    }
+    split.addEventListener("pointermove", move);
+    split.addEventListener("pointerup", done);
+    split.addEventListener("pointercancel", done);
+  });
+  split.addEventListener("dblclick", function () { settle(true); });
+  split.addEventListener("keydown", function (event) {
+    var step = event.shiftKey ? 64 : 16;
+    if (event.key === "ArrowLeft") setWidth(paneWidth() + step);
+    else if (event.key === "ArrowRight") setWidth(paneWidth() - step);
+    else return;
+    event.preventDefault();
+    settle(false);
+  });
+
   var sortKey = null;
   var sortDir = 1;
   function sortBy(key, th) {
@@ -409,6 +501,17 @@ INDEX_JS = """\
     });
   });
 
+  apply();
+  fromHash();
+})();
+"""
+
+# Copy buttons: a citation, or the whole capture as text for an AI assistant. Its own
+# script because the capture-folder page (folder.py) shows the same detail without
+# the index around it. It only reads the page.
+INDEX_COPY_JS = """\
+(function () {
+  "use strict";
   // Copy: one citation for a family-tree program, or the whole capture as text to paste
   // into an AI assistant. Built from what the detail shows; only reads the page.
   function copyFallback(text) {
@@ -481,9 +584,6 @@ INDEX_JS = """\
     var box = button.closest("#detail") || button.closest(".detail > td");
     if (box) copyText(captureAsText(box), button);
   });
-
-  apply();
-  fromHash();
 })();
 """
 

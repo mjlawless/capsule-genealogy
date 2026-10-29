@@ -147,3 +147,32 @@ def test_delete_malformed_id_is_rejected(tmp_path: Path) -> None:
         assert resp.status_code in (404, 405, 422), resp.text
     finally:
         app.dependency_overrides.clear()
+
+
+def test_archived_files_are_served_sandboxed_except_pdfs(tmp_path: Path) -> None:
+    """A snapshot keeps every <script> the site had (ad networks, trackers). Served from
+    the backend's own origin they ran as its pages: they could read the index and the token
+    in it, and they called the provider each time a snapshot was opened. Every capture file
+    but a PDF (Chrome's viewer will not load sandboxed) is a script-free, network-free sandbox."""
+    client = _client(tmp_path)
+    try:
+        capture_id = _capture_a_document(client)
+        folder = tmp_path / "captures" / capture_id
+        (folder / "snapshot.html").write_text(
+            '<script src="https://ads.example/x.js"></script><p>record</p>', encoding="utf-8")
+        (folder / "media").mkdir(exist_ok=True)
+        (folder / "media" / "seal.svg").write_text(
+            '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+            encoding="utf-8")
+        for name in ("snapshot.html", "media/seal.svg", "manifest.json"):
+            resp = client.get(f"/{capture_id}/{name}")
+            assert resp.status_code == 200, name
+            csp = resp.headers.get("content-security-policy", "")
+            assert csp.startswith("sandbox;") and "default-src 'none'" in csp, name
+            assert "script-src" not in csp and "allow-scripts" not in csp, name
+            assert resp.headers.get("x-content-type-options") == "nosniff", name
+        pdf = client.get(f"/{capture_id}/document.pdf")
+        assert "content-security-policy" not in pdf.headers
+        assert pdf.headers.get("x-content-type-options") == "nosniff"
+    finally:
+        app.dependency_overrides.clear()

@@ -148,7 +148,9 @@ def test_setup_checks_and_stores_the_key_and_shows_the_token(
     _, user_dir = elsewhere
     token = (user_dir / ".capsule-token").read_text().strip()
     assert token in result.output
-    assert "Load unpacked" in result.output
+    # REQ-013 §B: the store is the way in; Load unpacked stays as the fallback.
+    assert "chromewebstore.google.com" in result.output and "Load unpacked" in result.output
+    assert result.output.index("Chrome Web Store") < result.output.index("Load unpacked")
     assert "sk-ant-test-key" not in result.output  # never echoed
 
 

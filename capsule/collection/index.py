@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Callable, Optional, Sequence
 
 from capsule.collection.assets import (
+    INDEX_COPY_JS,
     INDEX_CORRECT_JS,
     INDEX_CSS,
     INDEX_DELETE_JS,
@@ -97,6 +98,13 @@ def _stamp(captured_at: Optional[str]) -> str:
         return ""
     day, _, rest = captured_at.partition("T")
     return f"{day} {rest[:5]} UTC" if len(rest) >= 5 else day
+
+
+def _stamp_cell(captured_at: Optional[str]) -> str:
+    """The index row's capture moment: it may wrap between the date and the time, never
+    inside either (a browser would otherwise break `2026-07-` / `08`)."""
+    day, _, time = _stamp(captured_at).partition(" ")
+    return f"<span>{esc(day)}</span> <span>{esc(time)}</span>" if time else esc(day)
 
 
 def _link(url: str) -> str:
@@ -189,6 +197,8 @@ def _row(record: CaptureRecord, interactive: bool) -> str:
     if record.verify_ok is False:
         why = "; ".join(record.verify_shortfall) or "this capture does not hold the record"
         pending += f'<span class="chip incomplete" title="{esc(why)}">incomplete</span>'
+    # A site name may wrap after a dot, so a long host name doesn't widen the index.
+    site = esc(record.site_name or _PENDING).replace(".", ".<wbr>")
     return (
         '<tr class="row">'
         f'<td>{pick}<span class="pill s-{esc(record.status)}">{esc(record.status)}</span>'
@@ -197,8 +207,8 @@ def _row(record: CaptureRecord, interactive: bool) -> str:
         f'<span title="{esc(record.record_type or "no record type given")}">'
         f'{esc(record.record_category)}</span></a></td>'
         f"<td>{esc(record.primary_persona or _PENDING)}</td>"
-        f"<td><code>{esc(record.site_name or _PENDING)}</code></td>"
-        f'<td class="stamp">{esc(_stamp(record.captured_at))}</td>'
+        f"<td><code>{site}</code></td>"
+        f'<td class="stamp">{_stamp_cell(record.captured_at)}</td>'
         f'<td class="files">{lock}{refs}{chips}{trash}</td>'
         "</tr>"
     )
@@ -216,6 +226,21 @@ def _doc_link(record: CaptureRecord) -> Optional[str]:
     if not record.is_document or not _SAFE_FILE_RE.match(name):
         return None
     return f'<a href="./{esc(record.folder_name)}/{esc(name)}">{esc(name)}</a>'
+
+
+def _full_page(record: CaptureRecord, interactive: bool) -> Optional[str]:
+    """Links to the full page (`media/<n>-page.mhtml`, REQ-015 §D), or None.
+
+    On the served index, "Open" shows it unpacked by the backend (Chrome will not display
+    MHTML over http) and "Download" gives the file. The static file links the .mhtml itself,
+    which Chrome opens from disk."""
+    rel = next((m for m in record.media_files if m.lower().endswith(".mhtml")), None)
+    if not rel or not all(_SAFE_FILE_RE.match(part) for part in rel.split("/")):
+        return None
+    url = f"./{esc(record.folder_name)}/{esc(rel)}"
+    if not interactive:
+        return f'<a href="{url}">Open the full page</a>'
+    return f'<a href="{url}?view">Open</a> · <a href="{url}">Download .mhtml</a>'
 
 
 def _reviewed(record: CaptureRecord) -> str:
@@ -245,6 +270,9 @@ def _meta(record: CaptureRecord, interactive: bool = False) -> list[tuple[str, s
     ]
     if doc:
         pairs.append(("Document", doc))
+    full = _full_page(record, interactive)
+    if full:
+        pairs.append(("Full page", full))
     if record.superseded_by:
         pairs.append((
             "Superseded by",
@@ -346,9 +374,13 @@ def _assertion_row(a: AssertionView, interactive: bool) -> str:
         attrs += ' class="retracted"'
     # The actions cell exists only on the served page; the static file keeps four columns.
     cell = f'<td class="fixes">{actions}</td>' if interactive else ""
+    # A field name has no spaces (`number_of_household_in_order_of_visitation`), so it may
+    # wrap only after an underscore; otherwise it widens the table past the ✎/✕ column.
+    # <wbr> adds no text: copying and the ✎ form still read the plain name.
+    field = esc(a.field).replace("_", "_<wbr>")
     return (
-        f"<tr{attrs}><td>{esc(a.persona_label)}</td><td>{esc(a.field)}</td>"
-        f"<td>{value}</td><td>{esc(a.evidence_type)}</td>{cell}</tr>"
+        f"<tr{attrs}><td>{esc(a.persona_label)}</td><td>{field}</td>"
+        f'<td class="val">{value}</td><td>{esc(a.evidence_type)}</td>{cell}</tr>'
     )
 
 
@@ -505,8 +537,9 @@ def _citation_block(record: CaptureRecord) -> str:
     )
 
 
-def _detail(record: CaptureRecord, interactive: bool) -> str:
-    """The full record. Present in the HTML; the script hides it (spec §3.2)."""
+def detail_body(record: CaptureRecord, interactive: bool) -> str:
+    """The full record: title, facts about the capture, citation, references, notes and
+    the extracted facts. The index's detail pane and the capture-folder page show it."""
     title = record.primary_persona or record.title or record.record_type or record.folder_name
     parts = [f'<h2 class="d-title">{esc(title)}</h2>']
     if record.short_note:
@@ -519,9 +552,14 @@ def _detail(record: CaptureRecord, interactive: bool) -> str:
     parts.append(_references(record))
     parts.append(_notes_block(record, interactive))
     parts.append(_assertions(record, interactive))
+    return "".join(parts)
+
+
+def _detail(record: CaptureRecord, interactive: bool) -> str:
+    """The full record. Present in the HTML; the script hides it (spec §3.2)."""
     return (
         f'<tr class="detail" id="cap-{esc(record.folder_name)}">'
-        f'<td colspan="{_COLUMNS}">{"".join(parts)}</td></tr>'
+        f'<td colspan="{_COLUMNS}">{detail_body(record, interactive)}</td></tr>'
     )
 
 
@@ -669,6 +707,7 @@ def render_index(
         "</header>\n"
         f"{main}\n"
         f"<script>{INDEX_JS}</script>\n"
+        f"<script>{INDEX_COPY_JS}</script>\n"
         f"{delete_script}"
         "</body>\n"
         "</html>\n"

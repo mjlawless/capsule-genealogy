@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.2.7 — an easier install, a full copy of every page, and a page for each capture
+
+- **Security fix: open saved pages safely.** A saved page keeps the scripts the site had
+  (ads, trackers). Until now, opening one from the index let those scripts run as part of
+  Capsule's own pages, where they could reach the rest of your archive and contact the site
+  and its advertisers. Saved files now open in a locked-down view where nothing runs and
+  nothing is loaded from the internet. **Every earlier version has this problem; please
+  update.**
+- **A full copy of every page.** A web-page capture now also keeps the **full page**
+  (`page.mhtml`): the page as you saw it, with its pictures and layout, in one file, made from
+  what Chrome had already loaded (nothing is fetched again). Open it from the index, or
+  download it and open it in Chrome or Edge. **Ads are hidden** from it and from the page PDF.
+  Like the PDF, it is made only when Chrome allows (not while DevTools is open on the tab) and
+  is left out of very large captures; the capture message says when it was.
+- **A page for each capture.** A capture's folder link now opens a readable page: the record
+  and its citation, its pictures and PDF shown in place, the full page, what the capture
+  records about itself, and every file. JSON files open as readable tables.
+- **Clear names for the copies of a page:** the **full page** (`page.mhtml`, the complete
+  copy), the **page PDF**, and the **page text** (`snapshot.html`, what Capsule reads facts
+  from).
+- **An easier install.** Adding the extension opens a welcome tab that walks through the two
+  parts and says when both are in place. The installers point to the Chrome Web Store. Chrome
+  asks for fewer permissions at install: downloads, and access to every site, are asked for
+  only when you turn on **Capsule button on every page, and keep site downloads** in Settings,
+  or when a capture needs a site. The extension warns when it and the app are out of step.
+- **Use Capsule from an AI assistant.** `skills/genealogy-capsule` teaches an AI browser agent
+  (such as Claude Code with Claude in Chrome) to capture with Capsule correctly: the one-time
+  setup, how to read a capture's result, and when a record really is saved. See "Using Capsule
+  with an AI assistant" in the README.
+- **The index's detail pane** always shows each fact's ✎ and ✕, and a divider between the list
+  and the details can be dragged (or moved with the arrow keys) to give either side more room.
+- **Fixes:** the AI connector's people and coverage lists page through long results like its
+  search does; an old label no longer hides a page from duplicate checks; a paid reading whose
+  results were not stored is recorded rather than paid for again; a page that is itself the
+  record image is graded as one, and a capture that holds only a print of it says why.
+
 ## 0.2.6 — choose which pages to read, and ask an AI about your archive
 
 - **Choose which saved pages to read.** Adding an API key no longer offers to read every

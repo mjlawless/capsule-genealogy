@@ -44,9 +44,9 @@ NEVER_MERGE = (
     "researcher to decide, with the evidence on each side."
 )
 GATED_NOTE = "From a subscription or sign-in site: for the researcher's personal research only."
-#: For a fact whose supporting words Capsule could not find on the saved page (Codex review).
+#: For a fact whose supporting words Capsule could not find in the page text (Codex review).
 UNVERIFIED_WARNING = (
-    "Capsule could not find these supporting words on the saved page: the value may not be "
+    "Capsule could not find these supporting words in the page text: the value may not be "
     "on the record. Say so, and ask the researcher to check the record before relying on it."
 )
 
@@ -279,11 +279,12 @@ class Archive:
             ]
         return out
 
-    def find_people(self, name: str, *, limit: int = 50) -> dict[str, Any]:
+    def find_people(self, name: str, *, limit: int = 50, offset: int = 0) -> dict[str, Any]:
         words = [w for w in name.lower().split() if w]
         if not words:
             raise ArchiveError("Give a name (or part of one) to look for.")
         limit = max(1, min(int(limit), _MAX_LIMIT))
+        offset = max(0, int(offset))
         found = []
         for record in self.records():
             for persona in record.personas:
@@ -302,8 +303,9 @@ class Archive:
             "about": ABOUT_TEXT,
             "never_merge": NEVER_MERGE,
             "total": len(found),
-            "people": found[:limit],
-            "more": len(found) > limit,
+            "offset": offset,
+            "people": found[offset:offset + limit],
+            "more": offset + limit < len(found),
         }
 
     def check_coverage(
@@ -312,7 +314,11 @@ class Archive:
         place: Optional[str] = None,
         record_type: Optional[str] = None,
         year: Optional[int] = None,
+        limit: int = 50,
+        offset: int = 0,
     ) -> dict[str, Any]:
+        limit = max(1, min(int(limit), _MAX_LIMIT))
+        offset = max(0, int(offset))
         by_source = {r.source_id: r for r in self.records() if r.source_id}
         repository = self._repository()
         try:
@@ -320,11 +326,19 @@ class Archive:
                 claims = repository.coverage_for(place=place, record_type=record_type, year=year)
             except sqlite3.OperationalError:
                 claims = []
+            # Paged AFTER dropping claims whose capture is not readable here (or is hidden as
+            # gated), so `total` counts what can be shown; sorted, so pages never overlap.
+            held = sorted(
+                ((claim, by_source[claim.source_id]) for claim in claims
+                 if claim.source_id in by_source),
+                key=lambda pair: (
+                    (pair[0].place or "").lower(), (pair[0].record_type or "").lower(),
+                    pair[0].year_start or 0, pair[0].year_end or 0, pair[1].folder_name,
+                    pair[0].id,
+                ),
+            )
             rows = []
-            for claim in claims:
-                record = by_source.get(claim.source_id)
-                if record is None:  # its capture is not readable here (or hidden as gated)
-                    continue
+            for claim, record in held[offset:offset + limit]:
                 try:
                     words = repository.get_snippet(claim.snippet_id).verbatim_text
                 except LookupError:
@@ -347,7 +361,10 @@ class Archive:
                 "What an index SAYS it covers, from its own coverage page. No claim found "
                 "means Capsule holds no coverage page for it, not that the index lacks it."
             ),
+            "total": len(held),
+            "offset": offset,
             "claims": rows,
+            "more": offset + len(rows) < len(held),
         }
 
     def was_captured(self, url: str) -> dict[str, Any]:
@@ -414,7 +431,7 @@ class Archive:
         try:
             text = _page_text(page.read_text(encoding="utf-8", errors="replace"))
         except OSError as exc:
-            raise ArchiveError(f"Capture {capture_id!r} has no saved page text ({exc}).") from exc
+            raise ArchiveError(f"Capture {capture_id!r} has no page text ({exc}).") from exc
         max_chars = max(1000, min(int(max_chars), 100000))
         return {
             "about": ABOUT_TEXT,
@@ -440,7 +457,7 @@ def _haystack(record: CaptureRecord) -> str:
 
 
 class _TextOnly(HTMLParser):
-    """The visible text of a saved page: no script, style or markup."""
+    """The visible text of a captured page: no script, style or markup."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)

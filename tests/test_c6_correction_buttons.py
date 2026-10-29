@@ -69,8 +69,9 @@ def served(tmp_path, monkeypatch):
 
 def _row(page: str, field: str) -> str:
     # re.S: a correction tag's tooltip holds one line per correction.
-    rows = re.findall(r"<tr[^>]*><td>[^<]*</td><td>" + re.escape(field) + r"</td>.*?</tr>", page,
-                      re.S)
+    # The field name may wrap after an underscore (`death_<wbr>date`).
+    cell = re.escape(field.replace("_", "_<wbr>"))
+    rows = re.findall(r"<tr[^>]*><td>[^<]*</td><td>" + cell + r"</td>.*?</tr>", page, re.S)
     assert len(rows) == 1, rows
     return rows[0]
 

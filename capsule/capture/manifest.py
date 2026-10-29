@@ -72,6 +72,7 @@ from capsule.pipeline.render_check import (
     looks_blank,
 )
 from capsule.pipeline.sufficiency import (
+    MISSED_RECORD_FILE_PREFIX,
     is_tile_viewer_source,
     longest_raster_edge,
     record_media_shortfall,
@@ -1035,12 +1036,21 @@ def _record_media_shortfall(root: Path, manifest: dict) -> tuple[str, ...]:
             )
         )
 
+    # Why the page's record file is missing, as the backend said at capture time (BUG-027):
+    # "no access to <site>" is the remedy, and result.json carries only the shortfall.
+    raw_warnings = manifest.get("media_warnings")
+    missed = [
+        w[len(MISSED_RECORD_FILE_PREFIX):]
+        for w in (raw_warnings if isinstance(raw_warnings, list) else [])
+        if isinstance(w, str) and w.startswith(MISSED_RECORD_FILE_PREFIX)
+    ]
     shortfall = record_media_shortfall(
         assertion_count=counts["assertions"],
         coverage_count=counts["coverage"],
         provider_claim_count=counts["provider_claims"],
         url=source_url if isinstance(source_url, str) else None,
         media=measured,
+        missed=missed,
     )
     return (shortfall,) if shortfall else ()
 

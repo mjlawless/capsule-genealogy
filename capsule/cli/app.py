@@ -45,6 +45,7 @@ from capsule.config import (
     data_dir,
     default_captures_root,
     default_db_path,
+    STORE_URL,
     stray_databases,
     work_queue_enabled,
 )
@@ -331,8 +332,10 @@ def setup(
     typer.echo("")
     typer.secho("Next:", bold=True)
     typer.echo("  1. Start Capsule:            capsule serve   (leave it running)")
-    typer.echo("  2. In Chrome, open chrome://extensions, turn on Developer mode, click")
-    typer.echo("     'Load unpacked' and choose the 'extension' folder of this download.")
+    typer.echo("  2. Add Genealogy Capsule to Chrome from the Chrome Web Store:")
+    typer.echo(f"     {STORE_URL}")
+    typer.echo("     (Or, in chrome://extensions, turn on Developer mode, click 'Load unpacked'")
+    typer.echo("     and choose the 'extension' folder of this download.)")
     typer.echo("  3. Click the Capsule icon. It pairs with Capsule by itself; if it ever asks")
     typer.echo("     for a token, paste this one:")
     typer.secho(f"       {token}", fg=typer.colors.CYAN, bold=True)
@@ -1239,7 +1242,7 @@ def mcp_server(
         False, "--print-config", help="Print the setup to paste into Claude Desktop / Claude Code."
     ),
     page_text: bool = typer.Option(
-        False, "--page-text", help="Also let the assistant read a saved page's full text."
+        False, "--page-text", help="Also let the assistant read a captured page's full text."
     ),
     exclude_gated: bool = typer.Option(
         False, "--exclude-gated", help="Hide captures from subscription and sign-in sites."

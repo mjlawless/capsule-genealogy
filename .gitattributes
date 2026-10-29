@@ -1,3 +1,5 @@
 *.cmd text eol=crlf
 *.command text eol=lf
 *.sh text eol=lf
+# A saved page as Chrome writes it: CRLF line endings are part of the format, keep the bytes.
+*.mhtml binary

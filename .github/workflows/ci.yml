@@ -1,11 +1,27 @@
 name: CI
-on: [push, pull_request]
+# macOS minutes cost ten times Linux minutes in a private repository (owner, 2026-10-29:
+# "reduce the cost, so maybe check Mac less"). So the private repo runs Linux and Windows on
+# every push, and all three systems when the run is started by hand (`gh workflow run CI
+# --ref main`, done before every release: no release without all three passing) and once a
+# week. The public repo, where Actions is free, runs all three every time.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 9 * * 1"  # Mondays, 09:00 UTC
+# A newer push makes a running check of an older commit on the same branch pointless: the newer
+# commit holds everything the older one did. Grouped by trigger too, so a push never cancels a
+# full check started by hand for a release.
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 jobs:
   test:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: ${{ fromJSON((github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.repository == 'mjlawless/capsule-genealogy') && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest","windows-latest"]') }}
     runs-on: ${{ matrix.os }}
     # Windows blocks like the others since v0.2.3 (it passed with 0.2.1/0.2.2 bar one test bug).
     steps:
@@ -36,7 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: ${{ fromJSON((github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.repository == 'mjlawless/capsule-genealogy') && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest","windows-latest"]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

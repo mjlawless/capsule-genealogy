@@ -24,8 +24,9 @@ button) and sends it to the Capsule program running **on your own computer** (`1
 
 ## Permissions the extension asks for, and why
 
-- **`debugger`**: only to save a PDF of the page you are capturing, at the moment you click
-  Capture.
+- **`debugger`**: only at the moment you click Capture, on that one tab, to save the page as a
+  PDF and as a full copy (`page.mhtml`), made from what the tab has already loaded. Ads are
+  hidden for that moment and the page is put back as it was.
 - **`downloads`**: to collect a record image that you download with the site's own Download
   button while a capture is waiting for it.
 - **Access to the websites you visit** (Chrome describes this as being able to read and change

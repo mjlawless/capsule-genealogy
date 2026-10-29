@@ -19,10 +19,26 @@ image and citation.
 
 **Description:**
 
-Genealogy Capsule turns the genealogy record you are looking at into evidence you keep. Click Capture and
-it saves, on your own computer:
+Name no third-party sites in the description, not even in a disclaimer: 0.2.5 was rejected
+2026-10-24 ("Spam and Placement in the Store", ref. Yellow Argon) for "excessive keywords", which
+was the one-line list of eight supported sites. Point at SITES.md instead.
 
-• the page exactly as you saw it, and a PDF of it
+The "About the warnings" section must match the permission dialog of the version on the store
+(REQ-013 §E). The text below is for 0.2.7; rewrite it when the permissions change.
+
+Genealogy Capsule turns the genealogy record you are looking at into evidence you keep.
+
+CAPSULE HAS TWO PARTS. This extension is one. The other is the free Capsule app, which keeps
+your archive on your own computer. Install both:
+1. The Capsule app (Windows, macOS, Linux; one download, no account):
+   https://github.com/mjlawless/capsule-genealogy#install-macos-or-windows
+2. This extension: click "Add to Chrome" above.
+The extension finds the app by itself the first time you click its icon.
+
+Click Capture and it saves, on your own computer:
+
+• the full page as you saw it, with its pictures and layout, and a PDF of it (ads hidden;
+  the capture message says if either could not be made)
 • the record image, from the site's own download button where there is one
 • an Evidence Explained-style citation, with the date you viewed it
 • fingerprints (SHA-256 hashes) of everything, so you can show later that nothing changed
@@ -30,19 +46,44 @@ it saves, on your own computer:
 With your own Anthropic API key (optional), Capsule also reads the record: every person, date and
 place, each linked to the exact words it came from and marked stated, calculated or estimated.
 
-It works on Ancestry, FamilySearch, Find a Grave, Newspapers.com, Archion, the National Library
-of Ireland, Riksarkivet, NYC vital records and ordinary web pages.
+It works on the major genealogy record sites, archive image viewers and ordinary web pages. The
+list of supported sites is at https://github.com/mjlawless/capsule-genealogy/blob/main/SITES.md
 
-Capsule needs its free companion program running on your computer (one-line install for macOS,
-Windows and Linux): https://github.com/mjlawless/capsule-genealogy
+ABOUT THE WARNINGS CHROME SHOWS WHEN YOU ADD CAPSULE
 
-• Your captures never leave your computer. There are no accounts and no servers.
+Chrome describes every extension's permissions in broad, standard words that it chooses, not
+the developer. Here is what each one means for Capsule:
+
+• "Read and change all your data on all websites" and "Access the page debugger backend":
+  Capsule saves a PDF and a full copy of the page you capture with Chrome's own print and save
+  tools, and Chrome only lets an extension use those through its debugger, which it describes
+  this broadly. Capsule uses it on one tab, only when you click Capture, hides the page's ads
+  for that moment, then puts the page back and lets go as soon as the copies are made.
+  Capsule never changes your data on any site.
+• Later, only if you choose: turning on "Capsule button on every page, and keep site
+  downloads" in Capsule's Settings makes Chrome ask for access to all sites (for the button)
+  and to "Manage your downloads" (so the file you download with a record site's own Download
+  button is kept as the record image). Capsule watches for downloads only during the few
+  seconds after you start a capture. Where Capsule offers a one-click image capture, starting
+  it has Capsule press the site's own Download button for that one record; otherwise it never
+  starts a download. Capturing from a site may also make Chrome ask about that one site.
+• "Proceed with caution: this extension is not trusted by Enhanced Safe Browsing": you see this
+  only if you have turned on Chrome's Enhanced Safe Browsing. It reflects how long the developer
+  has been publishing on the Chrome Web Store, not anything the extension does. Google treats
+  new developers this way for their first few months. Capsule is open source, so anyone can read
+  exactly what it does: https://github.com/mjlawless/capsule-genealogy
+
+WHAT STAYS PRIVATE
+
+• What the extension captures goes only to the Capsule app on your own computer. There are no
+  accounts and no Capsule servers. If you add your own AI key, the pages you choose to have read
+  are sent to Anthropic for reading, and nowhere else.
 • It reads only the page you choose to capture, when you click. No crawling, no background
   downloads.
 • Pages from subscription sites stay private: archived only on your computer, never published.
 • Open source (MIT).
 
-Genealogy Capsule is independent and not affiliated with Ancestry, FamilySearch or any other site.
+Genealogy Capsule is independent and not affiliated with any of the sites it works on.
 
 **Homepage URL:** https://github.com/mjlawless/capsule-genealogy
 **Support URL:** https://github.com/mjlawless/capsule-genealogy/issues
@@ -51,24 +92,30 @@ Genealogy Capsule is independent and not affiliated with Ancestry, FamilySearch 
 ## Privacy practices tab
 
 **Single purpose:**
-Capture the web page the user is viewing (its content, a PDF render and the record image the user
-downloads) and save it as cited, hashed evidence in the Capsule program on the user's own
-computer.
+Capture the web page the user is viewing (its content, a PDF render, a full copy of the page and
+the record image the user downloads) and save it as cited, hashed evidence in the Capsule program
+on the user's own computer.
 
 **Permission justifications:**
 
-- **debugger:** Used only when the user clicks Capture, on that tab, to print the page to PDF with
-  the Chrome DevTools Protocol (Page.printToPDF). The PDF is the archival picture of the page as
-  the user saw it. It is detached immediately after.
-- **downloads:** While a capture is waiting for it, the extension recognizes the record image the
-  user downloads with the website's own Download button and attaches that file to the capture. It
-  only looks at downloads during that short, user-started window and never starts downloads.
+- **debugger:** Used only when the user clicks Capture, on that tab, to print the page to PDF
+  (Page.printToPDF) and save a full copy of it as MHTML (Page.captureSnapshot) with the Chrome
+  DevTools Protocol, from what the tab has already loaded. Ads are hidden for that moment and the
+  page is restored. These are the archival pictures of the page as the user saw it. It is
+  detached immediately after.
+- **downloads (optional, requested only when the user turns it on in Settings):** While a capture
+  is waiting for it, the extension recognizes the record image the user downloads with the
+  website's own Download button and attaches that file to the capture. It only looks at downloads
+  during that short, user-started window. Where the extension offers a one-click image capture,
+  starting it has the extension press the website's own Download button for that one record;
+  otherwise it never starts downloads.
 - **scripting:** Injects the capture code into the tab the user chose to capture, to read the page
   content.
 - **activeTab:** Gives access to the tab the user is capturing, on the user's click.
 - **storage:** Remembers the local pairing with the Capsule program and the user's preferences.
-- **Host permission (content script on all URLs):** Shows the small Capsule button on pages and
-  receives the capture command. It reads a page only when the user clicks Capture.
+- **Optional host permission for all sites (requested only when the user turns on the page
+  button in Settings):** Shows the small Capsule button on pages and receives the capture command.
+  It reads a page only when the user clicks Capture.
 - **Host permission for http://127.0.0.1:8765:** The extension sends the captured page to the
   Capsule program running on the user's own computer, and to nothing else.
 - **Optional host permissions (requested per site at capture time):** To fetch a record file (for
@@ -78,7 +125,8 @@ computer.
 
 **Data usage (check these):** the store counts data as collected even when it goes only to the
 local Capsule program, so disclose generously.
-- **Website content:** page text, PDF and images of the pages the user captures.
+- **Website content:** page text, a PDF and a full copy (MHTML) of the pages the user captures,
+  and their images.
 - **Web history:** each capture records the page's address, title and the date viewed (the
   citation needs them).
 - **Authentication information:** the user's own Anthropic API key, if they enter it in the

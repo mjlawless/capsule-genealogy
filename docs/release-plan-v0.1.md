@@ -80,8 +80,11 @@ The private repo stays the development repo. For the next release:
 
 1. Bump the product version in `pyproject.toml` and `extension/manifest.json` together (a test
    enforces they match), add a `CHANGELOG.md` entry, commit, Codex-review. Push to the private
-   repo and **wait for its CI to pass on Linux, macOS and Windows** (`gh run watch <id>
-   --exit-status`) before going on: v0.2.3 went public and then failed two Windows-only tests.
+   repo, then **start the full check by hand and wait for it to pass on Linux, macOS and
+   Windows** (`gh workflow run CI --ref main`, then `gh run watch <id> --exit-status`) before
+   going on: v0.2.3 went public and then failed two Windows-only tests. Since 2026-10-29 an
+   ordinary push runs only Linux and Windows in the private repo (macOS minutes cost ten times
+   as much there), so the release check is the one that covers macOS.
 2. `git clone https://github.com/mjlawless/capsule-genealogy.git <dir>`, then replace its
    tracked contents with a fresh `release/export-public.sh <empty dir>` tree (copy over, keep
    `.git`), so the public history grows one commit per release rather than restarting.

@@ -563,9 +563,9 @@ function pairRefusedAdvice(extensionId) {
   if (!OFFICIAL_EXTENSION_IDS.includes(extensionId)) {
     return (
       "This copy of the extension (ID " + extensionId + ") isn't an official one, so Capsule " +
-      "won't pair with it. In chrome://extensions, remove it, then click Load unpacked and " +
-      "choose the extension folder inside your Capsule installation (the installer shows it), " +
-      "or install Genealogy Capsule from the Chrome Web Store."
+      "won't pair with it. Remove it in chrome://extensions, then add Genealogy Capsule from " +
+      "the Chrome Web Store. (Or click Load unpacked there and choose the extension folder " +
+      "inside your Capsule installation.)"
     );
   }
   return (
@@ -665,6 +665,8 @@ async function onCapture() {
       // capture (BUG-002, which broke this path too, not just the on-page trigger).
       if (rendered.media) media.push(rendered.media);
     }
+    // REQ-015 §D: the full page, last, and only within the backend's limits.
+    const fullPageSkipped = appendFullPage(media, rendered);
 
     // Empty means "auto-detect": omit the field entirely so the backend infers
     // gating from the page. An explicit declaration always wins over inference,
@@ -699,6 +701,10 @@ async function onCapture() {
       ? "\n\npage PDF: archived (media/0-record.pdf)"
       : "\n\npage PDF: skipped (" + (rendered.skipped || "unknown") + ") — the page " +
         "snapshot was still captured.";
+    out += fullPageSkipped
+      ? "\nfull page: skipped (" + fullPageSkipped + ")"
+      : "\nfull page: archived (page.mhtml)";
+    if ((rendered.ads || []).length) out += "\nads hidden: " + rendered.ads.length;
     // The backend looked at the render's pixels (BUG-001). A blank PDF is not evidence,
     // and must not read as a success here any more than it does in the toast.
     for (const warning of body.media_warnings || []) {
@@ -820,38 +826,82 @@ async function onSaveKey() {
 
 document.getElementById("save-key").addEventListener("click", onSaveKey);
 
+// REQ-013 §C: one opt-in for the on-page button everywhere and the site's own downloads. They
+// go together: arming a site download is how the on-page flows get the record image, and both
+// are for people who capture from the page itself (or an assistant driving it).
+const PAGE_EVERYWHERE = { permissions: ["downloads"], origins: ["https://*/*", "http://*/*"] };
+// download-intercept.js reads the finished download back through its file:// URL, which the old
+// <all_urls> content script used to cover. Chrome refuses a request naming file:///* while its
+// "Allow access to file URLs" switch is off (the default), and refuses ALL of it, so the file
+// grant is only asked for once that switch is on (Codex review, two rounds).
+const FILE_ORIGINS = ["file:///*"];
+const DOWNLOADS_FILE_HINT =
+  'To keep site downloads, Chrome also needs "Allow access to file URLs" turned on for Capsule: ' +
+  "open chrome://extensions, click Details on Genealogy Capsule, turn it on, then reopen this " +
+  "and tick the setting again.";
+
+// PURE (tested in node). What the setting asks Chrome for, given whether file URL access is on.
+function pageSettingRequest(fileAccess) {
+  return fileAccess
+    ? { permissions: PAGE_EVERYWHERE.permissions, origins: PAGE_EVERYWHERE.origins.concat(FILE_ORIGINS) }
+    : PAGE_EVERYWHERE;
+}
+
+async function initPageSetting() {
+  const box = document.getElementById("page-everywhere");
+  if (!box) return;
+  // Read before any click, so the click handler can call permissions.request first.
+  let fileAccess = false;
+  try {
+    fileAccess = await chrome.extension.isAllowedFileSchemeAccess();
+  } catch (_e) {
+    fileAccess = false;
+  }
+  const wanted = pageSettingRequest(fileAccess);
+  try {
+    box.checked = await chrome.permissions.contains(wanted);
+  } catch (_e) {
+    box.checked = false;
+  }
+  box.addEventListener("change", () => {
+    // permissions.request must be the FIRST call in the click: Chrome refuses it once an await
+    // has spent the user gesture. Chrome's question may close this popup; the grant still lands
+    // and background.js picks it up.
+    const change = box.checked
+      ? chrome.permissions.request(wanted)
+      : chrome.permissions
+          .remove(PAGE_EVERYWHERE)
+          .then((removed) => (fileAccess ? chrome.permissions.remove({ origins: FILE_ORIGINS }) : removed))
+          .then(() => false);
+    change
+      .then((on) => {
+        box.checked = on;
+        if (!on) {
+          render("The Capsule button shows only on sites you have allowed. Capture from this popup works everywhere.");
+        } else if (!fileAccess) {
+          render("The Capsule button now shows on every page you open.\n\n" + DOWNLOADS_FILE_HINT);
+        } else {
+          render("The Capsule button now shows on every page you open, and site downloads can be kept.");
+        }
+      })
+      .catch((err) => {
+        box.checked = !box.checked;
+        render("Could not change that setting: " + err);
+      });
+  });
+}
+
+initPageSetting();
+
 // On open: prefill the token, and probe the page for embedded-media hosts so the
 // Capture click can request them gesture-first. (Opening the popup grants
 // activeTab, so the probe's executeScript is allowed.)
-// v0.2 — the extension and the Capsule app are released together and should match. Chrome can
-// update one without the other, so say which one is behind, and how to fix it, in plain words.
-// PURE (tested in node): returns null when they match or a version cannot be read.
-function versionAdvice(appVersion, extensionVersion) {
-  const parse = (v) => {
-    const m = /^(\d+)\.(\d+)\.(\d+)/.exec(String(v || ""));
-    return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
-  };
-  const app = parse(appVersion);
-  const ext = parse(extensionVersion);
-  if (!app || !ext) return null;
-  const cmp = app[0] - ext[0] || app[1] - ext[1] || app[2] - ext[2];
-  if (cmp === 0) return null;
-  const a = app.join(".");
-  const e = ext.join(".");
-  if (cmp < 0) {
-    return (
-      "The Capsule app (" + a + ") is older than this extension (" + e + "). Update it by " +
-      "running the Capsule installer again; your archive is kept."
-    );
-  }
-  return (
-    "This extension (" + e + ") is older than the Capsule app (" + a + "). Update it: open " +
-    "chrome://extensions and click the reload arrow on Capsule (or load the new extension folder)."
-  );
-}
-
 function checkVersions(health) {
-  const advice = versionAdvice(health.version, chrome.runtime.getManifest().version);
+  const advice = versionAdvice(
+    health.version,
+    chrome.runtime.getManifest().version,
+    chrome.runtime.id === STORE_EXTENSION_ID
+  );
   const banner = document.getElementById("version-banner");
   if (advice && banner) {
     banner.textContent = advice;
@@ -863,101 +913,6 @@ function checkVersions(health) {
 // Most people add the extension (from the Web Store) before the app exists. Instead of a dead
 // popup, say what's missing, offer the double-click installer for this system, and switch to
 // the normal popup by itself once the app answers.
-
-const HEALTH_URL = BACKEND.replace(/\/capture$/, "/health");
-const REPO_URL = "https://github.com/mjlawless/capsule-genealogy";
-const INSTALL_DOCS_URL = REPO_URL + "#install-macos-or-windows";
-// Release assets built by installers/package-installers.sh: the names are a contract with it.
-const SETUP_DOWNLOADS = {
-  win: REPO_URL + "/releases/latest/download/Install-Capsule.cmd",
-  mac: REPO_URL + "/releases/latest/download/Install-Capsule-mac.zip",
-};
-// The README's one-line installs, for people who prefer a terminal (and the only way on Linux).
-const SETUP_COMMANDS = {
-  unix: "curl -LsSf https://raw.githubusercontent.com/mjlawless/capsule-genealogy/main/install.sh | sh",
-  win:
-    'powershell -ExecutionPolicy ByPass -c "irm ' +
-    'https://raw.githubusercontent.com/mjlawless/capsule-genealogy/main/install.ps1 | iex"',
-};
-// Set once this extension has reached the app: after that, no answer means "stopped", not
-// "never installed".
-const SEEN_APP_KEY = "capsuleSeenApp";
-
-// PURE (tested in node). What the first-run screen says, given chrome.runtime.getPlatformInfo()'s
-// `os` and whether this extension has ever reached the app.
-function setupScreen(os, seenApp) {
-  if (os !== "mac" && os !== "win" && os !== "linux") {
-    return {
-      title: "Capsule needs a computer",
-      body:
-        "Capsule saves pages into a free app on your own computer, and that app runs on " +
-        "Windows, macOS and Linux. It can't be installed on this device.",
-      download: "",
-      steps: "",
-      where: "",
-      command: "",
-    };
-  }
-  const download = SETUP_DOWNLOADS[os] || "";
-  const steps = {
-    win:
-      "Open the downloaded Install-Capsule.cmd. Windows may say it protected your PC, " +
-      "because the installer isn't signed yet: click More info, then Run anyway. A window " +
-      "shows the install, which takes a minute or two.",
-    mac:
-      "Open the downloaded Install-Capsule-mac.zip, then double-click Install Capsule. If " +
-      "macOS says it can't verify it (the installer isn't signed yet), click Done, open " +
-      "System Settings › Privacy & Security, scroll down, click Open Anyway and confirm. A " +
-      "Terminal window shows the install, which takes a minute or two.",
-    linux: "",
-  }[os];
-  const where = {
-    win: "Open PowerShell (Start menu › PowerShell), paste this and press Enter:",
-    mac: "Open Terminal (Applications › Utilities), paste this and press Return:",
-    linux: "Open a terminal, paste this and press Enter:",
-  }[os];
-  const command = os === "win" ? SETUP_COMMANDS.win : SETUP_COMMANDS.unix;
-  if (seenApp) {
-    return {
-      title: "Genealogy Capsule isn't running",
-      body:
-        "The Capsule app on this computer isn't answering. It starts by itself when you log " +
-        "in, so restarting your computer usually fixes this. Or run the installer again: it " +
-        "starts Capsule and keeps your archive.",
-      download,
-      steps,
-      where,
-      command,
-    };
-  }
-  return {
-    title: "One more step: install the Genealogy Capsule app",
-    body:
-      "This extension saves pages into Genealogy Capsule, a free app on your own computer, so " +
-      "your archive never leaves it. Install it once:",
-    download,
-    steps,
-    where,
-    command,
-  };
-}
-
-// The app's /health, or null when nothing answers. Capped, so a hung listener counts as "not
-// running" rather than a popup that never finishes opening.
-async function fetchHealth() {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 2500);
-  try {
-    const resp = await fetch(HEALTH_URL, { signal: ctrl.signal });
-    if (!resp.ok) return null;
-    const body = await resp.json();
-    return body && body.status === "ok" ? body : null;
-  } catch (_e) {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
-}
 
 async function showSetup() {
   const stored = await chrome.storage.local.get(SEEN_APP_KEY);
@@ -980,7 +935,10 @@ async function showSetup() {
     // Download in place, so this popup stays open and can turn green when the app starts.
     download.addEventListener("click", (event) => {
       event.preventDefault();
-      chrome.downloads.download({ url: s.download }).catch(() => chrome.tabs.create({ url: s.download }));
+      // `downloads` is optional since REQ-013 §C: without it, open the link in a tab instead.
+      const fallback = () => chrome.tabs.create({ url: s.download });
+      if (chrome.downloads) chrome.downloads.download({ url: s.download }).catch(fallback);
+      else fallback();
     });
   }
   byId("setup-steps").textContent = s.steps;

@@ -152,6 +152,8 @@ def test_REQ_007_every_extension_script_still_parses():
         "media-detect.js",
         "popup.js",
         "render-pdf.js",
+        "setup-shared.js",
+        "welcome.js",
     ):
         path = _INTERCEPT.parent / name
         proc = subprocess.run(

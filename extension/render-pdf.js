@@ -27,6 +27,19 @@ const RENDER_MAX_BYTES = 25 * 1024 * 1024; // 25 MiB
 // `finally` detach, which cancels the in-flight print.
 const RENDER_TIMEOUT_MS = 15000;
 
+// REQ-015 §D: the whole page as Chrome saves it (MHTML), taken in the same debugger
+// session as the PDF, from what the tab has already loaded. Measured on a local page that
+// logs every request: `Page.captureSnapshot` made none. Its own timeout, AFTER the PDF is
+// in hand, so a slow snapshot can never cost the PDF.
+const PAGE_ARCHIVE_TIMEOUT_MS = 20000;
+const PAGE_ARCHIVE_FILENAME = "page.mhtml";
+const PAGE_ARCHIVE_MIME = "multipart/related";
+const PAGE_ARCHIVE_PROVENANCE = "render:page-mhtml";
+// Mirrors the backend's MAX_MEDIA_COUNT and MAX_MEDIA_TOTAL_BYTES. Past either, the backend
+// refuses the WHOLE capture, so the full page is the item we leave out, never the record.
+const MEDIA_MAX_ITEMS = 25;
+const MEDIA_MAX_TOTAL_BYTES = 100 * 1024 * 1024;
+
 const RENDER_FILENAME = "record.pdf";
 const RENDER_MIME = "application/pdf";
 // Free-form provenance (backend: MediaIn.provenance) recording how the artifact was
@@ -73,6 +86,28 @@ const HIDE_SELECTORS = [
   "#capsule-key-prompt",
 ];
 
+// -- Ads (REQ-015 §C, owner 2026-10-29: "hide the ads by default") -----------------
+//
+// Hidden for the PDF and the full page by the conventions ad networks use, and NOTHING
+// broader. Deliberately not iframes, embeds, objects or dialogs in general: certificate
+// sites show the record itself in an <embed> or <iframe> (media-detect.js), and hiding one
+// would erase the evidence from its own archive. An iframe goes only when its host is an
+// ad network. Measured before shipping on all 478 captured pages in the owner's archive: the
+// matches were Find a Grave's ad slots, Ancestry's invisible 0x0 tracking frames and
+// Newspapers.com's ad frames, and none held any text of a fact read from its record.
+// tests/test_req_015_render_ads.py keeps this list from growing into record content.
+const AD_SELECTORS = [
+  '[id^="div-gpt-ad"]', '[id*="google_ads"]', "ins.adsbygoogle", "[data-ad]",
+  "[data-ad-slot]", "[data-ad-unit]", "[data-google-query-id]", '[id^="ad-"]',
+  '[class^="ad-"]', '[class*=" ad-"]', '[class~="ad"]', '[class~="ads"]',
+  '[class*="advert"]', '[aria-label="Advertisement" i]',
+];
+const AD_FRAME_HOSTS =
+  "(^|\\.)(doubleclick\\.net|googlesyndication\\.com|googleadservices\\.com|" +
+  "amazon-adsystem\\.com|adnxs\\.com|criteo\\.(com|net)|taboola\\.com|outbrain\\.com|" +
+  "rubiconproject\\.com|pubmatic\\.com|openx\\.net|casalemedia\\.com|moatads\\.com|" +
+  "mediatradecraft\\.com|bounceexchange\\.com)$";
+
 // Runs in the page (CDP Runtime.evaluate). Returns what it suppressed, so a heuristic
 // hit is reported rather than silently changing what the render contains.
 //
@@ -88,9 +123,12 @@ const HIDE_SELECTORS = [
 // Every mutation is recorded and undone by RESTORE_EXPRESSION.
 const HIDE_EXPRESSION = `(() => {
   const SELECTORS = ${JSON.stringify(HIDE_SELECTORS)};
+  const AD_SELECTORS = ${JSON.stringify(AD_SELECTORS)};
+  const AD_FRAME_HOSTS = new RegExp(${JSON.stringify(AD_FRAME_HOSTS)}, "i");
   const MARK = ${JSON.stringify(HIDE_MARK_ATTR)};
   const hid = [];
   const heuristic = [];
+  const ads = [];
 
   // Remember the exact inline display value we overwrite, on the element itself, so
   // the restore puts back precisely what was there (usually nothing) rather than
@@ -104,6 +142,17 @@ const HIDE_EXPRESSION = `(() => {
 
   for (const sel of SELECTORS) {
     for (const el of document.querySelectorAll(sel)) hide(el, sel, hid);
+  }
+
+  // Ads. Each one is marked like every other hidden element, so the full page records
+  // exactly what was hidden, and reported back so the outcome says how many.
+  for (const sel of AD_SELECTORS) {
+    for (const el of document.querySelectorAll(sel)) hide(el, "ad " + sel, ads);
+  }
+  for (const frame of document.querySelectorAll("iframe[src]")) {
+    let host = "";
+    try { host = new URL(frame.src, location.href).hostname; } catch (e) { continue; }
+    if (AD_FRAME_HOSTS.test(host)) hide(frame, "ad frame " + host, ads);
   }
 
   // The unknown-overlay heuristic. An element that is fixed, covers essentially the
@@ -123,7 +172,7 @@ const HIDE_EXPRESSION = `(() => {
     hide(el, (el.id && "#" + el.id) || el.tagName.toLowerCase() + "[z=" + z + "]", heuristic);
   }
 
-  return JSON.stringify({ hid, heuristic });
+  return JSON.stringify({ hid, heuristic, ads });
 })()`;
 
 const RESTORE_EXPRESSION = `(() => {
@@ -150,6 +199,41 @@ function withTimeout(promise, ms, reason) {
     timer = setTimeout(() => reject(new Error(reason)), ms);
   });
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+/** Base64 of the snapshot text. MHTML is 7-bit by construction; anything else is UTF-8. */
+function base64OfText(text) {
+  if (!/[^\x00-\x7f]/.test(text)) return btoa(text);
+  const bytes = new TextEncoder().encode(text);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
+}
+
+/** Decoded size of a base64 payload. */
+function decodedBytes(b64) {
+  return Math.floor(((b64 || "").length * 3) / 4);
+}
+
+/**
+ * Append the full page (`render.page`) to a capture's media, last, if it fits.
+ *
+ * Returns null when appended, else why not. The backend refuses a whole capture over 25
+ * items or 100 MiB, so the full page is checked against what is already going and left
+ * out rather than risk the record. Only `render.page` goes on the wire: it holds exactly
+ * MediaIn's fields (BUG-002).
+ */
+function appendFullPage(media, render) {
+  if (!render || !render.page) return (render && render.page_skipped) || "not made";
+  if (media.length >= MEDIA_MAX_ITEMS) return "the capture already holds " + MEDIA_MAX_ITEMS + " files";
+  const total = media.reduce((n, m) => n + decodedBytes(m.data_base64), 0);
+  if (total + decodedBytes(render.page.data_base64) > MEDIA_MAX_TOTAL_BYTES) {
+    return "with it the capture would exceed " + MEDIA_MAX_TOTAL_BYTES / 1024 / 1024 + " MiB";
+  }
+  media.push(render.page);
+  return null;
 }
 
 function messageOf(err) {
@@ -213,9 +297,39 @@ async function renderPagePdf(tabId) {
     );
 
     const result = printed.result;
-    const suppressed = printed.suppressed || { hid: [], heuristic: [] };
+    const suppressed = printed.suppressed || { hid: [], heuristic: [], ads: [] };
     const data = result && result.data;
-    if (!data) return { skipped: "renderer returned no data" };
+
+    // The whole page, while the ads are still hidden, so the full page records what was
+    // hidden (each element carries the mark). A failure leaves the PDF untouched.
+    let page = null;
+    let pageSkipped = null;
+    try {
+      const snap = await withTimeout(
+        chrome.debugger.sendCommand(target, "Page.captureSnapshot", { format: "mhtml" }),
+        PAGE_ARCHIVE_TIMEOUT_MS,
+        "saving the page timed out after " + PAGE_ARCHIVE_TIMEOUT_MS / 1000 + "s"
+      );
+      const text = snap && snap.data;
+      if (!text) pageSkipped = "the browser returned no page";
+      else if (text.length > RENDER_MAX_BYTES) {
+        pageSkipped = "page too large (" + Math.round(text.length / 1024 / 1024) + " MiB)";
+      } else {
+        // EXACTLY MediaIn's fields, as for the PDF (BUG-002).
+        page = {
+          data_base64: base64OfText(text),
+          filename: PAGE_ARCHIVE_FILENAME,
+          mime: PAGE_ARCHIVE_MIME,
+          provenance: PAGE_ARCHIVE_PROVENANCE,
+        };
+      }
+    } catch (err) {
+      pageSkipped = messageOf(err);
+    }
+    const ads = suppressed.ads || [];
+    const extras = { page, page_skipped: pageSkipped, ads };
+
+    if (!data) return { skipped: "renderer returned no data", ...extras };
 
     // base64 inflates by 4/3; compare the DECODED size against the backend's cap.
     const bytes = (data.length * 3) / 4;
@@ -227,6 +341,7 @@ async function renderPagePdf(tabId) {
           " MiB > " +
           RENDER_MAX_BYTES / 1024 / 1024 +
           " MiB cap)",
+        ...extras,
       };
     }
 
@@ -245,6 +360,10 @@ async function renderPagePdf(tabId) {
       // suppressed to get a clean print: an unknown overlay caught by the heuristic is
       // surfaced, never silent, because it changed what the archived record looks like.
       hid: (suppressed.hid || []).concat(suppressed.heuristic || []),
+      // The full page (MediaIn-shaped, or null) and why not; appended by the caller with
+      // appendFullPage, last, so it can never displace the record. The ads hidden, for
+      // the outcome.
+      ...extras,
     };
   } catch (err) {
     return { skipped: messageOf(err) };

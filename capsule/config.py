@@ -66,6 +66,9 @@ def work_queue_enabled() -> bool:
 #: (comma-separated).
 CAPSULE_EXTENSION_ID = "jalijanpiopkphjagoiofcofclmmmaan"
 CAPSULE_STORE_EXTENSION_ID = "dopmkpbopjegbdngekbdpgpkmpgkgeeo"
+#: Where people add the extension (REQ-013 §B). install.sh, install.ps1 and
+#: extension/setup-shared.js spell the same URL out; a test keeps them equal.
+STORE_URL = "https://chromewebstore.google.com/detail/genealogy-capsule/" + CAPSULE_STORE_EXTENSION_ID
 
 
 def pairable_extension_ids() -> frozenset[str]:

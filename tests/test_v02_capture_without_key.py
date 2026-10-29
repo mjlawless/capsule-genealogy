@@ -338,14 +338,12 @@ def test_found_reading_an_ancestry_capture_updates_the_ledger(tmp_path):
     assert row.assertion_count == 1
 
 
-def test_found_a_replacement_whose_rows_never_landed_is_trashed_and_re_read(tmp_path, monkeypatch):
-    """Codex review: the folder is written before its database rows. If the process dies in
-    between, reusing that folder would break supersession forever (its source is unknown to
-    the store). The retry moves it to the trash and reads again."""
+def _reading_dies_before_its_rows_land(tmp_path, monkeypatch):
+    """Archive a page, then read it with the database write failing after the model answered.
+    Returns the pending capture and the folder the paid reading was written to."""
     import pytest
 
     import capsule.pipeline.pipeline as pl
-    from capsule.collection.read import read_capture_record
 
     pending = _archive_page(tmp_path, "https://example.org/b/1", _PAGE, (2026, 3, 1, 9))
     real = pl._persist
@@ -357,10 +355,93 @@ def test_found_a_replacement_whose_rows_never_landed_is_trashed_and_re_read(tmp_
     with pytest.raises(OSError):
         _extract(tmp_path, pending.capture_folder.name)
     monkeypatch.setattr(pl, "_persist", real)
+    written = [
+        m.parent for m in (tmp_path / "captures").glob("*/manifest.json")
+        if json.loads(m.read_text(encoding="utf-8")).get("extracted_from")
+        == pending.capture_folder.name
+    ]
+    assert len(written) == 1
+    return pending, written[0]
+
+
+def test_found_a_paid_reading_whose_rows_never_landed_is_indexed_not_re_read(
+    tmp_path, monkeypatch
+):
+    """Codex review 2026-10-24: the folder is written before its database rows. If the write
+    fails in between, the retry used to trash the reading and pay for a new one. It now
+    indexes the reading from its own files: no second model call, same folder, rows present,
+    and the supersession applied."""
+    from capsule.collection.read import read_capture_record
+    from capsule.store.repository import Repository
+
+    pending, written = _reading_dies_before_its_rows_land(tmp_path, monkeypatch)
     done = _extract(tmp_path, pending.capture_folder.name)
-    assert not done.resumed and done.outcome is not None
+    assert done.resumed and done.outcome is None  # no model call on the retry
+    assert done.replacement == written
+    assert read_capture_record(pending.capture_folder).superseded_by == written.name
+    source_id = json.loads((written / "manifest.json").read_text(encoding="utf-8"))["source"]["id"]
+    repo = Repository(tmp_path / "capsule.db")
+    try:
+        held = repo.assertions_for_source(source_id)
+    finally:
+        repo.close()
+    assert [a.verbatim_value for a in held] == ["1850"]
+    assert not list((tmp_path / "captures" / "_trash").glob("*/manifest.json"))
+    # It looks like any other reading: its own verdict, and listed in the captures index.
+    assert json.loads((written / "result.json").read_text(encoding="utf-8"))["verify_ok"] is True
+    assert written.name in (tmp_path / "captures" / "index.html").read_text(encoding="utf-8")
+
+
+def test_found_a_damaged_unlanded_reading_is_trashed_and_read_again(tmp_path, monkeypatch):
+    """A reading that no longer matches its own hashes is never indexed: as before the fix,
+    it goes to the trash and the page is read again."""
+    from capsule.collection.read import read_capture_record
+
+    pending, written = _reading_dies_before_its_rows_land(tmp_path, monkeypatch)
+    extraction = written / "extraction.json"
+    extraction.write_text(extraction.read_text(encoding="utf-8").replace("1850", "1851"),
+                          encoding="utf-8")
+    done = _extract(tmp_path, pending.capture_folder.name)
+    assert not done.resumed and done.outcome is not None and done.replacement != written
     assert read_capture_record(pending.capture_folder).superseded_by == done.replacement.name
-    assert len(list((tmp_path / "captures" / "_trash").glob("*/manifest.json"))) == 1
+    assert [p.name for p in (tmp_path / "captures" / "_trash").iterdir()] == [written.name]
+
+
+def test_found_a_database_failure_while_indexing_keeps_the_reading_for_the_retry(
+    tmp_path, monkeypatch
+):
+    """Codex review: a disk-full error while indexing the saved reading is not a bad reading.
+    The error propagates, the folder stays, and the next retry indexes it: still one paid
+    model call in all."""
+    import pytest
+
+    from capsule.store.repository import Repository
+
+    pending, written = _reading_dies_before_its_rows_land(tmp_path, monkeypatch)
+    real = Repository.add_capture
+
+    def fails(self, **_kw):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(Repository, "add_capture", fails)
+    with pytest.raises(OSError, match="disk full"):
+        _extract(tmp_path, pending.capture_folder.name)
+    assert written.is_dir()
+    monkeypatch.setattr(Repository, "add_capture", real)
+    done = _extract(tmp_path, pending.capture_folder.name)
+    assert done.resumed and done.outcome is None and done.replacement == written
+
+
+def test_found_an_unlanded_reading_that_cannot_be_rebuilt_is_read_again(tmp_path, monkeypatch):
+    """A reading whose files do not turn back into what was written is never indexed as a
+    guess: it is trashed and the page read again, as before the fix."""
+    import capsule.pipeline.reextract as rx
+
+    pending, written = _reading_dies_before_its_rows_land(tmp_path, monkeypatch)
+    monkeypatch.setattr(rx, "serialize_extraction", lambda _e: b"not what was written")
+    done = _extract(tmp_path, pending.capture_folder.name)
+    assert not done.resumed and done.outcome is not None and done.replacement != written
+    assert [p.name for p in (tmp_path / "captures" / "_trash").iterdir()] == [written.name]
 
 
 def test_a_reinstated_capture_is_never_read_again_from_the_command_line(tmp_path, monkeypatch):

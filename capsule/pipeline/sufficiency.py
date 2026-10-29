@@ -83,7 +83,15 @@ _logger = logging.getLogger(__name__)
 # This costs nothing in recall. When a record page really does show its scan inline at full
 # resolution, the in-page media sweep banks that <img> as its own item, and THAT item is
 # measured here — so the floor is satisfied by the image itself, never by the print of it.
-_NOT_THE_RECORD = ("render:page-pdf", "viewer:canvas")
+_NOT_THE_RECORD = ("render:page-pdf", "render:page-mhtml", "viewer:canvas")
+
+#: How the backend's warning begins when the page held a record file and the extension could
+#: not fetch it (BUG-007), e.g. "default.jpg — Capsule has no access to <site>…". Written by
+#: `backend.app`, and read back from `manifest.media_warnings` by the folder-sourced verify, so
+#: the §3.3 shortfall can say WHY the record is missing (BUG-027). One constant, both sides.
+MISSED_RECORD_FILE_PREFIX = (
+    "RECORD FILE NOT CAPTURED — this capture holds a page render, not the record: "
+)
 
 def longest_raster_edge(
     data: bytes, *, ext: str = "", mime: str = ""
@@ -150,11 +158,14 @@ def record_media_shortfall(
     url: Optional[str] = None,
     media: Sequence[tuple[str, Optional[str], Optional[int]]],
     floor_px: int = RECORD_IMAGE_FLOOR_PX,
+    missed: Sequence[str] = (),
 ) -> Optional[str]:
     """Why this capture does not hold its record, or None when it does (or is out of class).
 
     `media` is `(path, provenance, longest_raster_edge_px)` per item, already measured by
     the caller — this function does no I/O so it can be reasoned about and tested directly.
+    `missed` is why each record file the page held was not fetched (the text after
+    `MISSED_RECORD_FILE_PREFIX`); the first one is quoted, because it names the remedy.
     """
     if not yielded_no_text_evidence(
         assertion_count=assertion_count,
@@ -165,8 +176,14 @@ def record_media_shortfall(
         return None
 
     best_path, best_px = None, 0
+    # The biggest artifact excluded by provenance, kept only to NAME it (BUG-027): a 4174px
+    # print of an image page is not the record, but "no measurable image at all" said of a
+    # folder holding one reads as false, and sends the researcher looking for the wrong fault.
+    print_path, print_px = None, 0
     for path, provenance, longest in media:
         if any((provenance or "").startswith(p) for p in _NOT_THE_RECORD):
+            if longest is not None and longest > print_px:
+                print_path, print_px = path, longest
             continue
         if longest is not None and longest > best_px:
             best_path, best_px = path, longest
@@ -176,12 +193,17 @@ def record_media_shortfall(
     # Say what was actually held, not merely that something failed: "no record image at all"
     # and "a 689x545 preview" call for different work by the researcher, and a verdict that
     # cannot tell them apart gets read as noise and then ignored.
-    held = (
-        f"the largest is {best_path} at {best_px}px on the long edge"
-        if best_path
-        else "it holds no measurable image at all"
-    )
+    if best_path:
+        held = f"the largest is {best_path} at {best_px}px on the long edge, under the {floor_px}px floor"
+    elif print_path:
+        held = (
+            f"it holds only {print_path} ({print_px}px), a page render or screen grab, "
+            f"which is never the record image itself"
+        )
+    else:
+        held = f"it holds no measurable image at all, under the {floor_px}px floor"
+    why = f" The record file was not captured: {missed[0]}" if missed else ""
     return (
         f"this capture read no record text at all, so the image IS the evidence — but "
-        f"{held}, under the {floor_px}px floor. It archives no record. (REQ-007 §3.3)"
+        f"{held}. It archives no record. (REQ-007 §3.3){why}"
     )

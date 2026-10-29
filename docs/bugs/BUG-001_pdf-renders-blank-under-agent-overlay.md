@@ -36,7 +36,9 @@
 > The screenshot feature, when it ships, must call the same suppression — see the warning
 > below, which still stands.
 
-**Status:** 🟡 **PARTIALLY VERIFIED 2026-08-24** — the visual gate is confirmed working; the
+**Status:** ✅ **CLOSED** (status corrected 2026-10-24): both defects were confirmed fixed by the
+reporter's end-to-end retest on 2026-07-14 (see "E2E CONFIRMED BY THE REPORTER" below, including
+the secondary Capsule-UI defect). The 2026-08-24 sweep below is history: the visual gate is confirmed working; the
 overlay-suppression half is not corpus-verifiable, and the sweep found a follow-on defect
 (**BUG-016**)
 > **What was verified 2026-08-24.** The gate was re-run over the collection using its own code

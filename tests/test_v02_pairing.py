@@ -114,6 +114,8 @@ def test_an_unofficial_copy_is_told_so_not_to_update_the_app():
     got a path-derived ID, and the popup wrongly said to update the app."""
     advice = _refused_advice("bgmnjfaogjkeicjkffcbdljhlncloijn")
     assert "isn't an official one" in advice and "Load unpacked" in advice
+    # REQ-013: the store copy is the main way in; Load unpacked is the fallback.
+    assert advice.index("Chrome Web Store") < advice.index("Load unpacked")
     assert "installer again" not in advice
     official = _refused_advice("jalijanpiopkphjagoiofcofclmmmaan")
     assert "installer again" in official

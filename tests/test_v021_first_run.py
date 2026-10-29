@@ -21,6 +21,7 @@ import pytest
 
 _ROOT = Path(__file__).resolve().parent.parent
 _POPUP = _ROOT / "extension" / "popup.js"
+_SHARED = _ROOT / "extension" / "setup-shared.js"
 _HTML = _ROOT / "extension" / "popup.html"
 _BACKGROUND = _ROOT / "extension" / "background.js"
 _CMD = _ROOT / "installers" / "Install-Capsule.cmd"
@@ -31,7 +32,7 @@ needs_node = pytest.mark.skipif(shutil.which("node") is None, reason="node is no
 
 
 def _setup_source() -> str:
-    source = _POPUP.read_text(encoding="utf-8")
+    source = _SHARED.read_text(encoding="utf-8")
     start = source.index("const REPO_URL")
     fn = source.index("function setupScreen(", start)
     return source[start : source.index("\n}\n", fn) + 3]
@@ -134,7 +135,7 @@ def test_a_failed_download_is_not_reported_as_installed(tmp_path, curl_body):
 
 
 def test_release_names_match_the_popup():
-    popup = _POPUP.read_text(encoding="utf-8")
+    popup = _SHARED.read_text(encoding="utf-8")
     packager = _PACKAGER.read_text(encoding="utf-8")
     for name in ("Install-Capsule.cmd", "Install-Capsule-mac.zip"):
         assert f"/releases/latest/download/{name}" in popup

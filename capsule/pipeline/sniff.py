@@ -30,11 +30,26 @@ _MAGIC: tuple[tuple[bytes, str, str], ...] = (
 )
 
 
+def _is_mhtml(data: bytes) -> bool:
+    """A saved web page in MHTML (REQ-015 §D). Kept tight, so an ordinary e-mail is not
+    taken for one: Chrome's own header, or the MIME headers of a page snapshot."""
+    if data.startswith(b"From: <Saved by Blink>"):
+        return True
+    head = data[:4096].lower()
+    return (
+        b"mime-version:" in head
+        and b"content-type: multipart/related" in head
+        and b"snapshot-content-location:" in head
+    )
+
+
 def sniff(data: bytes) -> Optional[tuple[str, str]]:
     """(ext, mime) as the BYTES declare themselves, or None if we do not recognize them."""
     for signature, ext, mime in _MAGIC:
         if data.startswith(signature):
             return ext, mime
+    if _is_mhtml(data):
+        return "mhtml", "multipart/related"
     # RIFF....WEBP — the only one whose signature is not a simple prefix.
     if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
         return "webp", "image/webp"

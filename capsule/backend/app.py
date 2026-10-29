@@ -26,6 +26,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator, Literal, Optional, Sequence
+from urllib.parse import urldefrag
 
 import anthropic
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
@@ -38,9 +39,15 @@ from capsule.agent.base import DEFAULT_MODEL, Agent
 from capsule.capture.manifest import MediaItem, resolve_capture_folder
 from capsule.collection.corrections import overlay_corrections
 from capsule.collection.escape import esc
+from capsule.collection.folder import (
+    render_folder_page,
+    render_json_view,
+    render_snapshot_view,
+)
 from capsule.collection.help import render_help
 from capsule.collection.index import render_index
-from capsule.collection.read import read_all
+from capsule.collection.mhtml import render_mhtml_view
+from capsule.collection.read import read_all, read_capture_record
 from capsule.contracts.evidence import GatingStatus
 from capsule.evals.fixtures import write_fixture
 from capsule.pipeline.annotate import add_note_to_capture
@@ -70,6 +77,7 @@ from capsule.pipeline.render_check import looks_blank
 from capsule.pipeline.fetch import ProvidedContentFetcher
 from capsule.pipeline.pipeline import CaptureOutcome, run_capture, run_document_capture
 from capsule.pipeline.sniff import MAX_ARTIFACT_BYTES, sniff
+from capsule.pipeline.sufficiency import MISSED_RECORD_FILE_PREFIX
 from capsule.pipeline.page_identity import accepted_page_label
 from capsule.pipeline.reextract import (
     ReadingBusy,
@@ -949,10 +957,64 @@ def settings_status(
     }
 
 
+# A capture's files are the archived site's own bytes: a snapshot keeps every <script> the
+# page had (ad networks, trackers, session recorders), and an SVG can carry script too.
+# Served from this origin, those scripts ran as the backend's own pages: they could read
+# the index (and the token in it) and every gated file, and they called the provider and
+# its trackers each time a snapshot was opened. So every capture file is a sandbox with no
+# script and no network beyond this archive: it shows what is on disk, nothing more.
+CAPTURE_FILE_CSP = (
+    "sandbox; default-src 'none'; img-src 'self' data:; media-src 'self' data:; "
+    "style-src 'self' 'unsafe-inline'; font-src 'self' data:"
+)
+MHTML_VIEW_CSP = (
+    "sandbox; default-src 'none'; img-src data:; media-src data:; "
+    "style-src 'unsafe-inline' data:; font-src data:"
+)
+
+
+# The folder page is the backend's own markup: script only for its Copy buttons, and
+# nothing loaded from anywhere but this archive.
+FOLDER_PAGE_CSP = (
+    "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
+    "img-src 'self' data:; frame-src 'self'; base-uri 'none'; form-action 'none'"
+)
+
+
+def _record_or_none(folder: Path):
+    """The capture as the index reads it, or None if its files cannot be read as one."""
+    try:
+        return read_capture_record(folder)
+    except Exception as exc:  # a damaged capture still gets its files listed
+        _logger.warning("could not read capture %s: %s", folder.name, exc)
+        return None
+
+
+# Declared before the catch-all below, which would otherwise answer it as an empty path.
+@app.get("/{capture_id}/", response_class=HTMLResponse)
+def capture_folder_page(
+    capture_id: str,
+    settings: Settings = Depends(get_settings),
+    repository: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    """REQ-015: one capture, readable. The record as the index shows it (with the owner's
+    corrections overlaid, as on the served index), its media in place, the full page and page text,
+    what the manifest says, and every file with a readable and a raw link."""
+    folder = resolve_capture_folder(settings.captures_root, capture_id)
+    record = _record_or_none(folder)
+    if record is not None:
+        record = overlay_corrections([record], repository)[0]
+    return HTMLResponse(
+        render_folder_page(record, folder),
+        headers={"X-Content-Type-Options": "nosniff", "Content-Security-Policy": FOLDER_PAGE_CSP},
+    )
+
+
 @app.get("/{capture_id}/{file_path:path}", response_model=None)
 def capture_file(
     capture_id: str,
     file_path: str,
+    request: Request,
     settings: Settings = Depends(get_settings),
 ) -> FileResponse | HTMLResponse:
     """Serve a file (or a folder listing) from a capture, so the served index's
@@ -966,8 +1028,43 @@ def capture_file(
     target = _resolve_capture_path(settings.captures_root, capture_id, file_path)
     if target.is_dir():
         return HTMLResponse(_render_dir_listing(capture_id, target))
+    if target.is_file() and "view" in request.query_params:
+        # REQ-015: a readable page for a JSON file, the page text or the full page. Same sandbox as the
+        # raw file; the file on disk is only read.
+        suffix = target.suffix.lower()
+        if suffix == ".mhtml":
+            # Inlined parts arrive as data: URIs, so this one sandbox also admits data:
+            # stylesheets. Still no script and no network.
+            return HTMLResponse(
+                render_mhtml_view(capture_id, file_path, target.read_bytes()),
+                headers={"X-Content-Type-Options": "nosniff", "Content-Security-Policy": MHTML_VIEW_CSP},
+            )
+        raw = target.read_text(encoding="utf-8", errors="replace")
+        if suffix == ".json":
+            folder = resolve_capture_folder(settings.captures_root, capture_id)
+            page = render_json_view(capture_id, file_path, raw, _record_or_none(folder))
+        elif suffix in (".html", ".htm"):
+            page = render_snapshot_view(capture_id, file_path, raw)
+        else:
+            page = None
+        if page is not None:
+            return HTMLResponse(page, headers={
+                "X-Content-Type-Options": "nosniff", "Content-Security-Policy": CAPTURE_FILE_CSP,
+            })
     if target.is_file():
-        return FileResponse(target)
+        # Chrome will not display MHTML served over http; offer it as the file it is, to open
+        # from disk (double-click opens it in Chrome or Edge).
+        is_mhtml = target.suffix.lower() == ".mhtml"
+        response = FileResponse(
+            target,
+            media_type="multipart/related" if is_mhtml else None,
+            filename=target.name if is_mhtml else None,
+        )
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        # Chrome's PDF viewer will not load under a sandbox; a PDF runs no page script.
+        if response.media_type != "application/pdf":
+            response.headers["Content-Security-Policy"] = CAPTURE_FILE_CSP
+        return response
     raise HTTPException(status_code=404, detail=f"no such file: {capture_id}/{file_path}")
 
 
@@ -997,9 +1094,35 @@ _MEASURABLE_EXTS = frozenset(
 _PROVIDER_DOWNLOAD_PROVENANCE = ("ancestry:download", "site:official-download")
 
 
-def _is_record_image(item: MediaItem) -> bool:
+_RASTER_EXTS = _MEASURABLE_EXTS - {"pdf"}
+
+
+def _is_record_image(item: MediaItem, page_url: Optional[str] = None) -> bool:
     provenance = item.provenance or ""
-    return any(provenance.startswith(prefix) for prefix in _RECORD_IMAGE_PROVENANCE)
+    if any(provenance.startswith(prefix) for prefix in _RECORD_IMAGE_PROVENANCE):
+        return True
+    return _is_the_page_itself(item, page_url)
+
+
+def _is_the_page_itself(item: MediaItem, page_url: Optional[str]) -> bool:
+    """Is this raster the document the tab was showing? (BUG-027)
+
+    An image opened directly in the tab (an IIIF `…/full/max/0/default.jpg`) has no record
+    text and no viewer: the page IS the record image, and the in-page sweep banks it as
+    `page:embedded`. Left ungraded, a 4190x2404 scan passed the §3.3 floor while
+    `image_status` said `none`. A thumbnail on an ordinary page never matches, because its
+    URL is not the page's — so the "page-served thumbnails are legitimately thumbnails"
+    rule above still holds.
+
+    Rasters only. A PDF opened in the tab also has its own URL, and a text PDF measures as
+    no raster: graded, it would flip from `none` to `failed` ("come back for the image") on
+    a document that never had one.
+    """
+    if not page_url or not item.source_url:
+        return False
+    mime = (item.mime or "").lower()
+    is_raster = mime.startswith("image/") if mime else item.ext.lower() in _RASTER_EXTS
+    return is_raster and urldefrag(item.source_url).url == urldefrag(page_url).url
 
 
 def _is_provider_download(item: MediaItem) -> bool:
@@ -1033,7 +1156,7 @@ def _with_measured_size(item: MediaItem) -> MediaItem:
 
 
 def _check_record_images(
-    media: Sequence[MediaItem],
+    media: Sequence[MediaItem], page_url: Optional[str] = None
 ) -> tuple[list[MediaItem], list[str], Optional[str]]:
     """Pixel-gate the record image(s). Returns (media with sizes, warnings, status).
 
@@ -1055,7 +1178,7 @@ def _check_record_images(
     status: Optional[str] = None
     stamped: list[MediaItem] = []
     for item in media:
-        if not _is_record_image(item):
+        if not _is_record_image(item, page_url):
             stamped.append(_with_measured_size(item) if _looks_like_measurable(item) else item)
             continue
         name = f"{item.slug}.{item.ext}"
@@ -1188,7 +1311,9 @@ _NOT_ARMED = "no download was armed"
 _CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]+")
 
 
-def _missing_image_reason(image_status: Optional[str], skipped: Optional[str]) -> Optional[str]:
+def _missing_image_reason(
+    image_status: Optional[str], skipped: Optional[str], *, on_ancestry: bool = True
+) -> Optional[str]:
     """Why this capture holds no record image, for the manifest and the ledger (REQ-010).
 
     - `failed`: the record has an image and we did not get it. Always worth saying why, and
@@ -1197,6 +1322,10 @@ def _missing_image_reason(image_status: Optional[str], skipped: Optional[str]) -
       only" though Ancestry held the scan).
     - `none`: we hold no record image. Worth saying only when a download WAS armed and did
       not arrive (BUG-018, BUG-022); "nothing was armed" is true of every ordinary web page.
+
+    Off Ancestry, "nothing was armed" says nothing either way, `failed` included (BUG-027: a
+    600px image opened directly in the tab was told to use the Ancestry flow on an archive's
+    site). The image warning already says what was wrong with the image itself.
     """
     if image_status not in ("failed", "none") or not skipped:
         return None
@@ -1204,7 +1333,7 @@ def _missing_image_reason(image_status: Optional[str], skipped: Optional[str]) -
     if not reason:
         return None
     not_armed = reason.startswith(_NOT_ARMED)
-    if image_status == "none" and not_armed:
+    if not_armed and (image_status == "none" or not on_ancestry):
         return None
     if image_status == "failed" and not_armed:
         return (
@@ -1506,7 +1635,7 @@ def _capture_locked(
         # Pixel-gate the record image and state what we actually got (R1.4/R4.3). The
         # bytes are archived either way — they are evidence of what Ancestry served — but
         # the SUCCESS REPORT must tell the truth, which is the whole BUG-001 lesson.
-        media, image_probs, measured = _check_record_images(media)
+        media, image_probs, measured = _check_record_images(media, page_url=req.url)
         # Measured FIRST, so a blank page render can be judged against what else the
         # capture holds: beside a full record image it is harmless (BUG-020).
         media_warnings = _check_rendered_media(
@@ -1519,10 +1648,7 @@ def _capture_locked(
         # are still worth keeping. But the capture must not READ as complete, because what
         # is missing is the record itself.
         for miss in req.missed_media:
-            media_warnings.append(
-                f"RECORD FILE NOT CAPTURED — this capture holds a page render, not the "
-                f"record: {miss}"
-            )
+            media_warnings.append(f"{MISSED_RECORD_FILE_PREFIX}{miss}")
         # Classified from the RECORD PAGE, not from what the caller expected (BUG-004).
         #
         # BUG-012: derive this for ANY Ancestry record page, not only when the caller
@@ -1538,12 +1664,13 @@ def _capture_locked(
         # measured image is reported on any host. What stays Ancestry-scoped is the
         # "this record has no image" INFERENCE, which only Ancestry's markup supports.
         on_ancestry_record = record_ids_from_url(req.url) is not None
+        on_ancestry = bool(req.expected_apid or on_ancestry_record)
         image_status = _derive_image_status(
-            html=req.html,
-            measured=measured,
-            on_ancestry_record=bool(req.expected_apid or on_ancestry_record),
+            html=req.html, measured=measured, on_ancestry_record=on_ancestry
         )
-        image_reason = _missing_image_reason(image_status, req.image_skipped)
+        image_reason = _missing_image_reason(
+            image_status, req.image_skipped, on_ancestry=on_ancestry
+        )
         if image_reason:
             media_warnings.append(image_reason)
         # No declared gating means "infer it", NOT "assume public". The browser

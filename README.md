@@ -5,17 +5,19 @@ computer that turn the record page you are looking at into an archived, cited, h
 that you keep: the page, the record image, what the record says, and an Evidence Explained
 citation.
 
-> **Status: v0.2.6, early access.** Capsule has been used daily on real research (hundreds
+> **Status: v0.2.7, early access.** Capsule has been used daily on real research (hundreds
 > of captures from Irish parish registers, NYC vital records, Ancestry, Archion, Riksarkivet,
 > Newspapers.com and more). Installing it takes one command and a few clicks in Chrome. You can
-> try it **without an AI key**; add one later to have records read. A Chrome Web Store listing
-> and a no-terminal app are on the [roadmap](ROADMAP.md).
+> try it **without an AI key**; add one later to have records read. The extension is on the
+> [Chrome Web Store](https://chromewebstore.google.com/detail/genealogy-capsule/dopmkpbopjegbdngekbdpgpkmpgkgeeo); a no-terminal app is on the [roadmap](ROADMAP.md).
 
 ## What it does
 
 Open a record page, click **Capture**. Capsule saves a **capture folder** on your computer:
 
-- the page exactly as you saw it (`snapshot.html`) and a PDF render of it;
+- the page as you saw it: the **full page** (`page.mhtml`, with its pictures and layout, ads
+  hidden) and a **PDF** of it, whenever Chrome allows them to be made (the capture message
+  says if one was left out), and its **page text** (`snapshot.html`), which Capsule reads;
 - the **record image**, from the site's own download button where one exists, never a
   screenshot standing in for the record;
 - an AI **extraction** of what the record says: people, dates, places, each fact linked to
@@ -83,9 +85,11 @@ Details and notes for each site: [SITES.md](SITES.md).
 - **Respect each site's terms.** Capsule only reads pages you can already see in your own
   browser session, but some subscription sites limit what you may save. You are responsible
   for using it within the terms of the sites you use.
-- **Chrome permissions:** the extension asks for `debugger` (used only to save a PDF of the
-  page when you click Capture), `downloads` (to collect a record image you download through
-  the site's own Download button), and access to the sites you capture from.
+- **Chrome permissions:** the extension asks for `debugger` (used only when you click
+  Capture, to save the page as a PDF and as a full copy, with ads hidden for that moment).
+  `downloads` (to collect a record image you download through the site's own Download
+  button) and access to the sites you capture from are asked for only when you turn on the
+  setting or capture from a site.
 - **On Ancestry**, the one-click image capture clicks Ancestry's own Download button for
   you, on the record you are viewing, only when you start it.
 
@@ -94,7 +98,9 @@ FamilySearch, Archion, Riksarkivet, Newspapers.com or any other site it works wi
 
 ## Install (macOS or Windows)
 
-You need about 10 minutes and Google Chrome.
+You need about 10 minutes and Google Chrome. **Capsule has two parts, and you need both:** the
+Capsule app, which keeps your archive on your computer, and the Chrome extension. Either order
+works: each one points you to the other.
 
 1. **Install the Capsule app: download it and double-click.**
    - **Windows:** [Install-Capsule.cmd](https://github.com/mjlawless/capsule-genealogy/releases/latest/download/Install-Capsule.cmd).
@@ -122,9 +128,14 @@ You need about 10 minutes and Google Chrome.
      ```
 
    It installs everything Capsule needs, starts it (and sets it to start whenever you log in),
-   and ends by showing you the folder of the Chrome extension.
-2. **Add the extension to Chrome:** go to `chrome://extensions`, turn on **Developer mode**
-   (top right), click **Load unpacked**, and choose the folder the installer showed you
+   and ends by opening the extension's Chrome Web Store page.
+2. **Add the extension to Chrome** from the
+   [Chrome Web Store](https://chromewebstore.google.com/detail/genealogy-capsule/dopmkpbopjegbdngekbdpgpkmpgkgeeo) (**Add to Chrome**). On a first install the installer opens that
+   page for you. Chrome lists what the extension may do and, if you use Enhanced Safe Browsing,
+   says to proceed with caution because the publisher is new to the store; the extension's
+   welcome page explains each line.
+   *Can't use the store?* Go to `chrome://extensions`, turn on **Developer mode** (top right),
+   click **Load unpacked**, and choose the folder the installer showed you
    (`~/Capsule/app/extension` on macOS, `%LOCALAPPDATA%\Capsule\app\extension` on Windows).
 3. **Pin the Capsule icon** (puzzle-piece menu) and click it once. It connects to Capsule by
    itself.
@@ -171,6 +182,19 @@ uv run capsule --help                # everything else
 registers a logon task (no admin rights); see the script's header for `status`, `restart`
 and `uninstall`.
 
+## Using Capsule with an AI assistant
+
+- **Let an assistant capture for you.** [`skills/genealogy-capsule/SKILL.md`](skills/genealogy-capsule/SKILL.md)
+  teaches a browser assistant (for example Claude in Chrome, driven from Claude Code) to
+  capture the record you are looking at and to check that the record really was saved. The
+  installer already put it on your computer, in `~/Capsule/app/skills/genealogy-capsule`
+  (Windows: `%LOCALAPPDATA%\Capsule\app\skills\genealogy-capsule`). For Claude Code, copy
+  that folder into `~/.claude/skills/`. Other assistants can be given the file to read. It needs the **Capsule button on every page**
+  setting turned on (Capsule popup › Settings).
+- **Let an assistant read your archive.** `capsule mcp` lets Claude Desktop or Claude Code
+  search your captures and answer with citations to them. It cannot change anything.
+  `capsule mcp --print-config` prints the setup.
+
 ## Getting help
 
 - Something went wrong? Open an **[issue](../../issues)** and include what you clicked, the
@@ -180,8 +204,8 @@ and `uninstall`.
 
 ## Where it's heading
 
-See the [roadmap](ROADMAP.md): next up is reviewing and correcting what Capsule read, and a
-Chrome Web Store listing.
+See the [roadmap](ROADMAP.md): next up is a gentler install (fewer permission warnings, a
+guided first run) and reviewing and correcting what Capsule read.
 
 ## For developers
 

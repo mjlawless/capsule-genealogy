@@ -1,0 +1,69 @@
+From: <Saved by Blink>
+Snapshot-Content-Location: http://127.0.0.1:8899/index.html
+Subject: 
+Date: Thu, 29 Oct 2026 17:31:33 GMT
+MIME-Version: 1.0
+Content-Type: multipart/related;
+	type="text/html";
+	boundary="----MultipartBoundary--3ODRX0IHTrB3xiN8au2jWDp8OG4lk2fV8T4wMWXeoe----"
+
+
+------MultipartBoundary--3ODRX0IHTrB3xiN8au2jWDp8OG4lk2fV8T4wMWXeoe----
+Content-Type: text/html
+Content-ID: <frame-21D8DC0F4FC959906CF79AD4948BAF99@mhtml.blink>
+Content-Transfer-Encoding: quoted-printable
+Content-Location: http://127.0.0.1:8899/index.html
+
+<!DOCTYPE html><html><head><meta http-equiv=3D"Content-Type" content=3D"tex=
+t/html; charset=3Dwindows-1252"><link rel=3D"stylesheet" href=3D"http://127=
+.0.0.1:8899/style.css"></head>
+<body><h1>Record page</h1><img src=3D"http://127.0.0.1:8899/a.png"><div id=
+=3D"div-gpt-ad-1">AD SLOT</div>
+<iframe src=3D"cid:frame-6AC7455A746C68A4D6B9F56E3A6433F8@mhtml.blink"></if=
+rame><div style=3D"height:4000px"></div>
+<img src=3D"http://127.0.0.1:8899/lazy.png" loading=3D"lazy"></body></html>
+------MultipartBoundary--3ODRX0IHTrB3xiN8au2jWDp8OG4lk2fV8T4wMWXeoe----
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-Location: http://127.0.0.1:8899/a.png
+
+iVBORw0KGgoAAAANSUhEUgAAACgAAAAeCAIAAADRv8uKAAAAKklEQVR4nO3NMQ0AAAgDsAmb/yAL
+GXA06d9MeyJisVgsFovFYrFYLP4bL9HP3Ew1mJ9PAAAAAElFTkSuQmCC
+
+------MultipartBoundary--3ODRX0IHTrB3xiN8au2jWDp8OG4lk2fV8T4wMWXeoe----
+Content-Type: font/woff2
+Content-Transfer-Encoding: base64
+Content-Location: http://127.0.0.1:8899/font.woff2
+
+d09GMmZha2U=
+
+------MultipartBoundary--3ODRX0IHTrB3xiN8au2jWDp8OG4lk2fV8T4wMWXeoe----
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-Location: http://127.0.0.1:8899/bg.png
+
+iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAEklEQVR4nGOwsTmBBzGMSmNDAH3r
+fQEDCLGmAAAAAElFTkSuQmCC
+
+------MultipartBoundary--3ODRX0IHTrB3xiN8au2jWDp8OG4lk2fV8T4wMWXeoe----
+Content-Type: text/css
+Content-Transfer-Encoding: quoted-printable
+Content-Location: http://127.0.0.1:8899/style.css
+
+@charset "windows-1252";
+
+body { font-family: Test, serif; background: url("bg.png"); }
+
+h1 { color: rgb(122, 92, 46); }
+
+@font-face { font-family: Test; src: url("font.woff2"); }
+------MultipartBoundary--3ODRX0IHTrB3xiN8au2jWDp8OG4lk2fV8T4wMWXeoe----
+Content-Type: text/html
+Content-ID: <frame-6AC7455A746C68A4D6B9F56E3A6433F8@mhtml.blink>
+Content-Transfer-Encoding: quoted-printable
+Content-Location: http://127.0.0.1:8899/frame.html
+
+<html><head><meta http-equiv=3D"Content-Type" content=3D"text/html; charset=
+=3Dwindows-1252"></head><body><p>frame content</p><img src=3D"http://127.0.=
+0.1:8899/a.png"></body></html>
+------MultipartBoundary--3ODRX0IHTrB3xiN8au2jWDp8OG4lk2fV8T4wMWXeoe------

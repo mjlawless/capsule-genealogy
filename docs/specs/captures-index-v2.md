@@ -261,7 +261,7 @@ Renderer changes only; the entry shape is unchanged, so this stays `captures-ind
 ### 4e. Choosing which captures to read with AI (added 2026-10-24)
 
 A capture saved without an API key (`manifest.extraction == "pending"`) waits to be read.
-The owner ruled that adding a key must not read them all: the user chooses. Renderer and
+Adding a key does not read them all: the user chooses. Renderer and
 backend changes only; the entry shape is unchanged, so this stays `captures-index/v2`.
 
 - **Waiting** means pending AND never superseded (`lifecycle.json` never recorded
@@ -284,8 +284,7 @@ backend changes only; the entry shape is unchanged, so this stays `captures-inde
 - The popup no longer reads: its "Read them now" (`POST /settings/read-pending`, read
   everything) is retired and answers 410 with a pointer to the index. `capsule extract --all`
   stays, as an explicit request, and reads only waiting captures; `capsule extract <id>`
-  refuses one that is not waiting, so a capture is read at most once everywhere (owner,
-  2026-10-24).
+  refuses one that is not waiting, so a capture is read at most once everywhere.
 
 ## 5. Non-goals
 

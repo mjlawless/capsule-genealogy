@@ -19,7 +19,7 @@
   const BTN_ID = "capsule-capture-btn";
   const TOAST_ID = "capsule-toast";
   const KEY_PROMPT_ID = "capsule-key-prompt";
-  // v0.2 — the "connect an API key" prompt closes itself after this long (owner: ~15 s), and
+  // v0.2 — the "connect an API key" prompt closes itself after this long (about 15 s), and
   // "Not today" quiets it for a day so it never nags on every capture.
   const KEY_PROMPT_MS = 15000;
   const KEY_PROMPT_SNOOZE_KEY = "capsuleKeyPromptSnoozedUntil";

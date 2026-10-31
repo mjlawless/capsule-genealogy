@@ -155,7 +155,7 @@ class CaptureRecord:
     #: The MODEL's note about the page — usually WHY there are no assertions ("the
     #: record is a scanned image; no transcribable text"). Deliberately NOT `notes`,
     #: which is the RESEARCHER's voice: this is the extractor's, and conflating the two
-    #: would let tool output masquerade as the owner's own words.
+    #: would let tool output masquerade as the researcher's own words.
     extraction_notes: str | None = None
     #: The primary archived artifact's filename (`snapshot.html` or `document.pdf`),
     #: read from `archive.local_snapshot` — the direct link target for a document.
@@ -170,7 +170,7 @@ class CaptureRecord:
     #: v0.2 — archived without an API key; the record has not been read yet.
     extraction_pending: bool = False
     #: True when `lifecycle.json` ever recorded `superseded`, even if reinstated since: a
-    #: pending capture read once is never offered for reading again (owner, 2026-10-24).
+    #: pending capture read once is never offered for reading again.
     ever_superseded: bool = False
     #: The replacement's folder name, when it is known; None if this one is current or the
     #: replacement's folder is unavailable.

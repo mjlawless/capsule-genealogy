@@ -1,0 +1,48 @@
+{
+  "spec_version": "capture-folder/v1",
+  "capture_id": "20260714-a860historicalvitalrecordsnycgov-40f557bf",
+  "tool_version": "0.0.0",
+  "created_at": "2026-07-14T20:36:49.339769Z",
+  "source": {
+    "id": "40f557bf19c84c8c92fdac2f0739a562",
+    "url": "https://a860-historicalvitalrecords.nyc.gov/view/8611745",
+    "title": "M-K-1914-0004564 - Historical Vital Records of NYC",
+    "site_name": "a860-historicalvitalrecords.nyc.gov",
+    "record_type": "Marriage Certificate",
+    "gating_status": "public",
+    "copyright_flag": false,
+    "source_quality": "derivative",
+    "source_quality_rationale": "This is an index/database record page from the NYC Municipal Archives with structured fields (Name, Soundex, Type, Borough, Date, Certificate). The actual certificate is offered as an embedded/linked PDF, but the transcribable content on the page itself is the index entry.",
+    "content_hash": "827d106988d2979e6008c33d1a0bc25822f23274e060b2d62c1394660f679ffa"
+  },
+  "archive": {
+    "local_snapshot": "snapshot.html",
+    "sha256": "26de778e271f2a53770ac48a9dc1c9753c1311ba8bcb507f610b7f722a44b14d",
+    "captured_at": "2026-07-14T20:36:49.341772Z",
+    "wayback_url": null
+  },
+  "media": [
+    {
+      "path": "media/0-record.pdf",
+      "source_url": null,
+      "mime": "application/pdf",
+      "provenance": "render:page-pdf"
+    },
+    {
+      "path": "media/1-m-k-1914-0004564.pdf",
+      "source_url": "https://dorisarchive.blob.core.windows.net/reference/REC0051_VitalRecords/MarriageCertificates/Kings/1914/M-K-1914-0004564.pdf",
+      "mime": "application/pdf",
+      "provenance": "page:embedded"
+    }
+  ],
+  "hashes": {
+    "algo": "sha256",
+    "files": {
+      "snapshot.html": "26de778e271f2a53770ac48a9dc1c9753c1311ba8bcb507f610b7f722a44b14d",
+      "extraction.json": "827d106988d2979e6008c33d1a0bc25822f23274e060b2d62c1394660f679ffa",
+      "citation.json": "eb5e42a34c4673a2ca25f11b69edff85e9c5edde9f83153124d12b634ec744c4",
+      "media/0-record.pdf": "48db9ee30980663d9e204cea263e3504b4daa2d5ec6c4d0b520be7c73d391dcc",
+      "media/1-m-k-1914-0004564.pdf": "caf831c6421f05732058ec4575bb9b967ea7b5f9cc6515e980bb1f45823cf50c"
+    }
+  }
+}

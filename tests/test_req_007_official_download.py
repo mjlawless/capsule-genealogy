@@ -18,7 +18,7 @@ Two halves are tested here, because they fail in different ways:
     the same silence §3.1 was filed to end.
 
 What is NOT tested here, and cannot be: the live run. Driving Archion's export control
-needs a subscriber session behind a login. That E2E is the owner's, as REQ-002's was.
+needs a subscriber session behind a login. That E2E is a manual live check, as REQ-002's was.
 """
 from __future__ import annotations
 

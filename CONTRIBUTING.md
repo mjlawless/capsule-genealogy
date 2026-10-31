@@ -30,11 +30,23 @@ uv run ruff check capsule tests
 ```
 
 The extension's JavaScript is tested from Python by running it in `node` (install Node.js
-18+). Bug fixes come with a regression test that fails without the fix. Bugs and
-requirements are written up as numbered documents in `docs/bugs/` and `docs/specs/`, with the
-evidence for the fix.
+18+). Bug fixes come with a regression test that fails without the fix.
+
+Comments and test names often cite `BUG-NNN` or `REQ-NNN`. Those are numbers in the
+project's own tracker, which is not published; the comment beside the number states the reason
+that matters. Where one doesn't, the comment is the bug: say so in an issue.
+
+## How this repository is published
+
+Development happens in a private repository; this one is published from it at each release,
+one commit per version. So the history here is a list of releases, and work between releases
+does not show up until the next one.
 
 ## Pull requests
 
-Keep them focused, describe what changed and why, and include tests. By contributing you
-agree that your contribution is licensed under the MIT license.
+Pull requests are welcome. Keep them focused, describe what changed and why, and include tests.
+Because this repository is a published copy, an accepted change is applied in the development
+repository and arrives here with the next release, credited to you with a `Co-authored-by` line;
+the pull request is then closed with a note saying which release carries it. By contributing you
+agree that your contribution is licensed under the MIT license. Everyone taking part follows the
+[Code of Conduct](CODE_OF_CONDUCT.md).

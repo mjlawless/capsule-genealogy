@@ -1,6 +1,6 @@
 """The machine-transcript layer (REQ-006) — a reading aid, never evidence.
 
-Owner ruling R1 (2026-09-24): transcribed values live here, in their own
+Transcribed values live here, in their own
 append-only records, and NEVER in `Assertion`. A vision transcript is a
 derivative of the image (REQ-006 §5.1): the image stays the cited evidence,
 and nothing in this layer can raise a confidence grade (§5.2). Promoting a

@@ -62,9 +62,9 @@ class ArchiveError(Exception):
 @dataclass(frozen=True)
 class ConnectorSettings:
     data_dir: Path
-    #: Owner ruling (REQ-012 §9.1): gated captures are readable, flagged; this hides them.
+    #: Gated captures are readable, flagged; this hides them.
     include_gated: bool = True
-    #: Owner ruling (REQ-012 §9.2): the full page-text tool exists but is off by default.
+    #: The full page-text tool exists but is off by default.
     page_text: bool = False
 
 

@@ -1,7 +1,7 @@
 """Move an archive between computers: `capsule export` packages one, `capsule import` merges one.
 
-The owner's research archive lives on one computer and a fresh install on another; the same
-need arrives for anyone who buys a new computer. Copying `capsule.db` and `captures/` by hand
+A research archive lives on one computer and a fresh install on another, as when anyone
+buys a new computer. Copying `capsule.db` and `captures/` by hand
 gets three things wrong, and this module exists to get them right:
 
 - **A live database.** The server may be mid-capture. A file copy can miss the write-ahead

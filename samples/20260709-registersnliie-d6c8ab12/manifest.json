@@ -1,0 +1,40 @@
+{
+  "spec_version": "capture-folder/v1",
+  "capture_id": "20260709-registersnliie-d6c8ab12",
+  "tool_version": "0.0.0",
+  "created_at": "2026-07-09T18:14:02.070349Z",
+  "source": {
+    "id": "d6c8ab1222694f10bc120c42b9ee1c64",
+    "url": "https://registers.nli.ie/registers/vtls000633924#page/150/mode/1up",
+    "title": "04603/06, St. John's, Sligo - Catholic Parish Registers at the NLI",
+    "site_name": "registers.nli.ie",
+    "record_type": "baptism register (scanned image, no transcribable text)",
+    "gating_status": "public",
+    "copyright_flag": false,
+    "source_quality": "derivative",
+    "content_hash": "8f144456e95bd74b81c2daa8160bad6f16220c6d9f74fc264f4a6f20ec4d4840"
+  },
+  "archive": {
+    "local_snapshot": "snapshot.html",
+    "sha256": "273019a1a0d36ad0835e3dbb2fa4599d85a749252b32bc7de58ca349f307509d",
+    "captured_at": "2026-07-09T18:14:02.072349Z",
+    "wayback_url": null
+  },
+  "media": [
+    {
+      "path": "media/0-vtls000633924-150.jpg",
+      "source_url": "https://iserver.nli.ie/fcgi-bin/iipsrv.fcgi?FIF=000640000%2F000633924%2Fvtls000633924_150.jp2&CVT=jpeg",
+      "mime": "image/jpeg",
+      "provenance": "viewer:bookreader-iip leaf=149"
+    }
+  ],
+  "hashes": {
+    "algo": "sha256",
+    "files": {
+      "snapshot.html": "273019a1a0d36ad0835e3dbb2fa4599d85a749252b32bc7de58ca349f307509d",
+      "extraction.json": "8f144456e95bd74b81c2daa8160bad6f16220c6d9f74fc264f4a6f20ec4d4840",
+      "citation.json": "21852e6b5ac4d62776ace531e9dab259f7fa1d442d6011cc01e8fa486be70f66",
+      "media/0-vtls000633924-150.jpg": "aef6a8048a45131de8673749f3f46793f49a4527f690c8c94ca73b0b411b9f97"
+    }
+  }
+}

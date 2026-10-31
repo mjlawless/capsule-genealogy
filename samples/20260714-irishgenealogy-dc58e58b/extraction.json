@@ -1,0 +1,230 @@
+{
+  "personas": [
+    {
+      "id": "c4bf13126ba14ff78a717eb91d8cb18b",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "role": "Party 1",
+      "label": "William Lawles"
+    },
+    {
+      "id": "54a48d2f0460483590cc563d7b6ac9bc",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "role": "Party 2",
+      "label": "Catherine Durkan"
+    }
+  ],
+  "snippets": [
+    {
+      "id": "ea9aafca19264de0b948c7e99579e3d3",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "verbatim_text": "Party 1 Name: William Lawles",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "ed6a3adb1205471ca1987c6b32f2db9f",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "verbatim_text": "Party 2 Name: Catherine Durkan",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "f96f9bf539954b0a815ddf0e999550d9",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "verbatim_text": "Date of Event: 22/09/1867",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "49473cee20f546cfb949519382183449",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "verbatim_text": "Date of Event: 22/09/1867",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "6928baa386b64c1a85d8ed825a874886",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "verbatim_text": "Group Registration ID: 3011398",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "3dc63eca76664b208b63e1a9f8fe877d",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "verbatim_text": "SR District/Reg Area: Ballina",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "e624b788a860490f868eaee3cffefbc4",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "verbatim_text": "SR District/Reg Area: Ballina",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "2f64290e723e4e9182500e619fe696ff",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "verbatim_text": "Image path: marriage_returns\\marriages_1867\\11506\\8231195.tif",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    }
+  ],
+  "assertions": [
+    {
+      "id": "24d06a0ac4fd4beeba9531ec3fffcf93",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "persona_id": "c4bf13126ba14ff78a717eb91d8cb18b",
+      "snippet_id": "ea9aafca19264de0b948c7e99579e3d3",
+      "field": "party_1_name",
+      "verbatim_value": "William Lawles",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-14T15:31:04.675850Z"
+    },
+    {
+      "id": "7f5ba20c3c5e43bda7ba8ddce997b8c1",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "persona_id": "54a48d2f0460483590cc563d7b6ac9bc",
+      "snippet_id": "ed6a3adb1205471ca1987c6b32f2db9f",
+      "field": "party_2_name",
+      "verbatim_value": "Catherine Durkan",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-14T15:31:04.675850Z"
+    },
+    {
+      "id": "9d5718afa1b945e7ae71dd82d155cf60",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "persona_id": "c4bf13126ba14ff78a717eb91d8cb18b",
+      "snippet_id": "f96f9bf539954b0a815ddf0e999550d9",
+      "field": "date_of_event",
+      "normalized_field": "marriage_date",
+      "verbatim_value": "22/09/1867",
+      "normalized_value": "1867-09-22",
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-14T15:31:04.675850Z"
+    },
+    {
+      "id": "e2a08b591d4348878a020e7894a409e5",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "persona_id": "54a48d2f0460483590cc563d7b6ac9bc",
+      "snippet_id": "49473cee20f546cfb949519382183449",
+      "field": "date_of_event",
+      "normalized_field": "marriage_date",
+      "verbatim_value": "22/09/1867",
+      "normalized_value": "1867-09-22",
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-14T15:31:04.675850Z"
+    },
+    {
+      "id": "eaa395858ac04a5492c8a20a04adf8bb",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "persona_id": "c4bf13126ba14ff78a717eb91d8cb18b",
+      "snippet_id": "6928baa386b64c1a85d8ed825a874886",
+      "field": "group_registration_id",
+      "verbatim_value": "3011398",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-14T15:31:04.675850Z"
+    },
+    {
+      "id": "670ed6c79f7f4573958a484a012b25b9",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "persona_id": "c4bf13126ba14ff78a717eb91d8cb18b",
+      "snippet_id": "3dc63eca76664b208b63e1a9f8fe877d",
+      "field": "sr_district_reg_area",
+      "verbatim_value": "Ballina",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-14T15:31:04.675850Z"
+    },
+    {
+      "id": "001c9eb17ff84105a496d7086117a835",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "persona_id": "54a48d2f0460483590cc563d7b6ac9bc",
+      "snippet_id": "e624b788a860490f868eaee3cffefbc4",
+      "field": "sr_district_reg_area",
+      "verbatim_value": "Ballina",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-14T15:31:04.675850Z"
+    },
+    {
+      "id": "8278e72d42614231b47bd1d7161b839d",
+      "source_id": "dc58e58bc46644d3b17a728360cbc580",
+      "persona_id": "c4bf13126ba14ff78a717eb91d8cb18b",
+      "snippet_id": "2f64290e723e4e9182500e619fe696ff",
+      "field": "image_path",
+      "verbatim_value": "marriage_returns\\marriages_1867\\11506\\8231195.tif",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-14T15:31:04.675850Z"
+    }
+  ]
+}

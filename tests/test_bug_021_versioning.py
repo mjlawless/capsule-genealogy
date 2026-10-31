@@ -43,6 +43,9 @@ def test_BUG_021_the_product_version_is_real_and_shared_with_the_extension():
     assert re.fullmatch(r"\d+\.\d+\.\d+", product), product
     ext = json.loads((_EXT / "manifest.json").read_text(encoding="utf-8"))["version"]
     assert ext == product, "extension/manifest.json and pyproject.toml must carry one version"
+    cff = (_ROOT / "CITATION.cff").read_text(encoding="utf-8")
+    cited = re.search(r'^version: "([^"]+)"', cff, re.M).group(1)
+    assert cited == product, "CITATION.cff must cite the current version (and its release date)"
 
 
 def test_BUG_021_a_checkout_records_the_commit():

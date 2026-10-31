@@ -19,8 +19,7 @@ run `capsule` from another folder and you are silently working in a new, empty a
 
 1. `CAPSULE_DATA_DIR`, if set, always wins.
 2. An existing `./data/capsule.db` is kept: every checkout that already holds an archive
-   (the owner's, with hundreds of captures and a launchd service started from the repo)
-   keeps using it, so nothing is stranded or moved.
+   (a development checkout with a service started from the repo, say) keeps using it, so nothing is stranded or moved.
 3. Otherwise the operating system's per-user data folder (`platformdirs`): on macOS
    `~/Library/Application Support/Capsule`, on Windows `%LOCALAPPDATA%\\Capsule`, on Linux
    `~/.local/share/Capsule`. The same answer from every working directory.
@@ -50,10 +49,9 @@ def work_queue_enabled() -> bool:
     """Is the Ancestry work queue on? Off unless `CAPSULE_ENABLE_WORK_QUEUE` is set (v0.1.0).
 
     The queue (`/ancestry/seed`, `/ancestry/next`, `capsule ancestry seed`) paces an agent
-    through a list of records in the researcher's own logged-in session. That is the owner's
-    research workflow, and on a subscription site it is the researcher's call to make under
-    that site's terms, so a public install does not offer it until it is deliberately turned
-    on (owner ruling, 2026-10-21). Capturing the record you are viewing, including the
+    through a list of records in the researcher's own logged-in session. On a subscription site
+    that is the researcher's call to make under that site's terms, so a public install does not
+    offer it until it is deliberately turned on. Capturing the record you are viewing, including the
     one-click Ancestry image capture, does not depend on it.
     """
     return os.environ.get("CAPSULE_ENABLE_WORK_QUEUE", "").strip().lower() in {"1", "true", "yes"}
@@ -102,7 +100,7 @@ def correction_fixtures_root(db_path: Path | None = None) -> Path:
     A fixture holds the record's transcribed values, and a gated record's values
     must never be republished, so they stay beside the database they came from
     (gitignored in a checkout, private on an install) rather than in the repo's
-    committed `evals/fixtures/` (owner ruling, 2026-10-23). `capsule eval` reads both.
+    committed `evals/fixtures/`. `capsule eval` reads both.
     `CAPSULE_FIXTURES_DIR` overrides it.
     """
     explicit = os.environ.get("CAPSULE_FIXTURES_DIR")

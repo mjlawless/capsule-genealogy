@@ -21,8 +21,8 @@ The page selector is the answer and it was in the DOM the whole time:
 This is a DETERMINISTIC parser, never model output — the same call REQ-003 made for the
 household block. Which page was on screen is a structural fact about the document, not a
 reading of the record, so there is nothing for a model to judge and everything for it to
-get subtly wrong. The no-CSS-selectors rule protects EXTRACTION from layout drift; the
-2026-07-14 PM ruling already allows a viewer adapter to locate things structurally.
+get subtly wrong. The no-CSS-selectors rule protects EXTRACTION from layout drift; a
+viewer adapter may still locate things structurally.
 
 Scoped to `TILE_VIEWER_HOSTS`, because a `<select>` on an arbitrary page is a form control,
 not a page selector. Off those hosts this returns None rather than guessing, and an

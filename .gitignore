@@ -20,6 +20,11 @@ data/
 *.db
 evals/fixtures/**/snapshot.html
 evals/fixtures/**/media/
+# Sample captures ship their derived JSON only, never the page or its images.
+samples/**/snapshot.html
+samples/**/*.mhtml
+samples/**/media/
+samples/**/crops/
 # Fixtures that corrections write beside an archive: the record's values and its snapshot,
 # so never committed, wherever CAPSULE_DATA_DIR puts the archive (even the checkout itself).
 eval-fixtures/

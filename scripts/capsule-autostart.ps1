@@ -16,8 +16,7 @@
     runs scripts\capsule-serve.ps1, which pins the working directory to this repo and
     logs to data\logs\serve.log. See README.md, "Keep the backend running".
 
-    This is the owner's bridge until the productization tray app (docs/productization-plan.md,
-    P2.2) replaces it.
+    A stopgap until a tray app replaces it.
 #>
 [CmdletBinding()]
 param(

@@ -1,0 +1,48 @@
+{
+  "spec_version": "capture-folder/v1",
+  "capture_id": "20260719-a860historicalvitalrecordsnycgov-603f8316",
+  "tool_version": "0.0.0",
+  "created_at": "2026-07-19T20:48:39.317191Z",
+  "source": {
+    "id": "603f831689334eb2a9863a892106b358",
+    "url": "https://a860-historicalvitalrecords.nyc.gov/view/4017734",
+    "title": "D-Q-1903-0000148 - Historical Vital Records of NYC",
+    "site_name": "a860-historicalvitalrecords.nyc.gov",
+    "record_type": "death",
+    "gating_status": "public",
+    "copyright_flag": false,
+    "source_quality": "derivative",
+    "source_quality_rationale": "The page is a database index entry with structured fields (Name, Soundex, Age, Type, Borough, Date, Certificate) about a death certificate; it embeds a PDF of the certificate but the visible page itself is the index/database record.",
+    "content_hash": "1c54a1b8a8ff391c3a9600e038d37ca92a862b2a6cc8dc29313b26593ccee5d7"
+  },
+  "archive": {
+    "local_snapshot": "snapshot.html",
+    "sha256": "70e874041083aa96e0a4e94736bd41ac5f92fc5669152ca68fb84d960c9d370e",
+    "captured_at": "2026-07-19T20:48:39.318193Z",
+    "wayback_url": null
+  },
+  "media": [
+    {
+      "path": "media/0-record.pdf",
+      "source_url": null,
+      "mime": "application/pdf",
+      "provenance": "render:page-pdf"
+    },
+    {
+      "path": "media/1-d-q-1903-0000148.pdf",
+      "source_url": "https://dorisarchive.blob.core.windows.net/reference/REC0051_VitalRecords/Deaths/Queens/1903/D-Q-1903-0000148.pdf",
+      "mime": "application/pdf",
+      "provenance": "page:embedded"
+    }
+  ],
+  "hashes": {
+    "algo": "sha256",
+    "files": {
+      "snapshot.html": "70e874041083aa96e0a4e94736bd41ac5f92fc5669152ca68fb84d960c9d370e",
+      "extraction.json": "1c54a1b8a8ff391c3a9600e038d37ca92a862b2a6cc8dc29313b26593ccee5d7",
+      "citation.json": "cd6df9b3bf0298f5fca959dbc2fcebfd8dc1e259b628fed6a59c8016c3daeaad",
+      "media/0-record.pdf": "b3b4bb197ebfc83cb3fc3971d7d7b20d43a9346fd2c5ee98f004e5f90065a2fe",
+      "media/1-d-q-1903-0000148.pdf": "9527c31512f3c9d6890961f4fc62514be7097e1fa79718fea2b6d7776e98f5ba"
+    }
+  }
+}

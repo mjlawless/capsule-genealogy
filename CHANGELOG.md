@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.8 — security updates, and sample captures to look at
+
+- **Security update: the image library.** Capsule opens the record images it saves to check
+  that each one is a full, readable picture, using the Pillow library. This release moves to
+  Pillow 13, which fixes flaws in how images are read, among them a critical one in its JPEG
+  reader. A website's image is outside your control, so **please update.**
+- **Updated Anthropic library.** Pages are read through version 2 of Anthropic's library,
+  which uses Anthropic's current API version. Nothing changes in how you use Capsule or in what
+  a reading costs.
+- **Sample captures.** `samples/` holds six real captures of public records a century or more
+  old (NYC Municipal Archives, IrishGenealogy.ie, the National Library of Ireland): what
+  Capsule records about a page, its facts and its citation, as JSON files you can open.
+- **For contributors:** a code of conduct, a citation file (`CITATION.cff`) for citing
+  Capsule in your own work, a pull-request template, and notes on how the repository is
+  published and how pull requests are taken.
+
 ## 0.2.7 — an easier install, a full copy of every page, and a page for each capture
 
 - **Security fix: open saved pages safely.** A saved page keeps the scripts the site had

@@ -2,8 +2,7 @@
 
 Capsule is append-only, so a bad or incomplete capture is never edited or deleted. Trash
 moves a folder out of the index but says nothing about what replaced it. This records the
-replacement as a LIFECYCLE event on the old capture (owner ruling 2026-10-21): "cite that one
-instead". It links two sources and says nothing about the people in them, so it can never
+replacement as a LIFECYCLE event on the old capture: "cite that one instead". It links two sources and says nothing about the people in them, so it can never
 merge identities, and a mistake is undone by a later `reinstated` event, never by an edit.
 
 The store is the authority; the old capture's hash-excluded `lifecycle.json` is its

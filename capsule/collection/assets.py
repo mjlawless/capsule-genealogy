@@ -977,7 +977,7 @@ INDEX_CORRECT_JS = """\
 })();
 """
 
-# "Read with AI" (owner, 2026-10-24), emitted ONLY on the served page. Reads the ticked
+# "Read with AI", emitted ONLY on the served page. Reads the ticked
 # captures, or with none ticked every waiting capture the filters show, after a confirmation
 # that names them and the rough cost. Only captures still waiting carry a tick box; the
 # backend refuses any other (`POST /read`). Progress comes from `/settings/status`.

@@ -362,7 +362,7 @@ def test_status_is_extracted_when_assertions_exist_else_captured(tmp_path):
 
 def test_only_lifecycle_stages_with_data_are_shown(tmp_path):
     """Reviewed (correction log) and Transcribed (REQ-006) have data; matched and attached
-    have none yet, so they are not shown (owner, 2026-10-23: placeholders confused)."""
+    have none yet, so they are not shown (placeholders confused)."""
     _make_capture(
         tmp_path,
         source_id="018f0000aaaa",

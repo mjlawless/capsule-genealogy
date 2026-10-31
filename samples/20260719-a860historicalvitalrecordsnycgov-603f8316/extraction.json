@@ -1,0 +1,199 @@
+{
+  "personas": [
+    {
+      "id": "b1ce553951cb49a2bab4395b065225b0",
+      "source_id": "603f831689334eb2a9863a892106b358",
+      "role": "deceased",
+      "label": "Mary Lawless"
+    }
+  ],
+  "snippets": [
+    {
+      "id": "7414123c63994a75910e59b4f785534b",
+      "source_id": "603f831689334eb2a9863a892106b358",
+      "verbatim_text": "Name: Mary Lawless",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "6eba797d28e34cb383a5a57a05211269",
+      "source_id": "603f831689334eb2a9863a892106b358",
+      "verbatim_text": "Soundex: L420",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "bc295a7466d54877ba2797e8d173b2f5",
+      "source_id": "603f831689334eb2a9863a892106b358",
+      "verbatim_text": "Age: 46 y",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "9e3c7bf2e45c4210a5e380f6216156d9",
+      "source_id": "603f831689334eb2a9863a892106b358",
+      "verbatim_text": "Type: Death Certificate",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "d0723439062b4de18bd97dc13be7c833",
+      "source_id": "603f831689334eb2a9863a892106b358",
+      "verbatim_text": "Borough: Queens",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "c2d31552060448bca60448b36ccbfab7",
+      "source_id": "603f831689334eb2a9863a892106b358",
+      "verbatim_text": "Date: 1903-01-19",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "e951e5772c804152836aee0d6d45e8c9",
+      "source_id": "603f831689334eb2a9863a892106b358",
+      "verbatim_text": "Certificate: 148",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    }
+  ],
+  "assertions": [
+    {
+      "id": "e2e75625489d4c4ab7615d95659d2df3",
+      "source_id": "603f831689334eb2a9863a892106b358",
+      "persona_id": "b1ce553951cb49a2bab4395b065225b0",
+      "snippet_id": "7414123c63994a75910e59b4f785534b",
+      "field": "name",
+      "verbatim_value": "Mary Lawless",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-19T20:48:39.317191Z"
+    },
+    {
+      "id": "58630a371f224cdbad57b2ad7404b7f3",
+      "source_id": "603f831689334eb2a9863a892106b358",
+      "persona_id": "b1ce553951cb49a2bab4395b065225b0",
+      "snippet_id": "6eba797d28e34cb383a5a57a05211269",
+      "field": "soundex",
+      "verbatim_value": "L420",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-19T20:48:39.317191Z"
+    },
+    {
+      "id": "3edb54e9fc7d46a49d7b6a1f39c7f2d5",
+      "source_id": "603f831689334eb2a9863a892106b358",
+      "persona_id": "b1ce553951cb49a2bab4395b065225b0",
+      "snippet_id": "bc295a7466d54877ba2797e8d173b2f5",
+      "field": "age",
+      "verbatim_value": "46 y",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-19T20:48:39.317191Z"
+    },
+    {
+      "id": "4a20f606c2924ad191a3527e87702ca5",
+      "source_id": "603f831689334eb2a9863a892106b358",
+      "persona_id": "b1ce553951cb49a2bab4395b065225b0",
+      "snippet_id": "9e3c7bf2e45c4210a5e380f6216156d9",
+      "field": "type",
+      "normalized_field": "record_type",
+      "verbatim_value": "Death Certificate",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-19T20:48:39.317191Z"
+    },
+    {
+      "id": "f2e023a7c26740c5a39bd1aeb3e3caa8",
+      "source_id": "603f831689334eb2a9863a892106b358",
+      "persona_id": "b1ce553951cb49a2bab4395b065225b0",
+      "snippet_id": "d0723439062b4de18bd97dc13be7c833",
+      "field": "borough",
+      "verbatim_value": "Queens",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-19T20:48:39.317191Z"
+    },
+    {
+      "id": "ee443bf7400a4cefaf52f8751c3ade8a",
+      "source_id": "603f831689334eb2a9863a892106b358",
+      "persona_id": "b1ce553951cb49a2bab4395b065225b0",
+      "snippet_id": "c2d31552060448bca60448b36ccbfab7",
+      "field": "date",
+      "normalized_field": "death_date",
+      "verbatim_value": "1903-01-19",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-19T20:48:39.317191Z"
+    },
+    {
+      "id": "a3fd8591f2764ec4b795a01f0de8e981",
+      "source_id": "603f831689334eb2a9863a892106b358",
+      "persona_id": "b1ce553951cb49a2bab4395b065225b0",
+      "snippet_id": "e951e5772c804152836aee0d6d45e8c9",
+      "field": "certificate",
+      "verbatim_value": "148",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-19T20:48:39.317191Z"
+    }
+  ],
+  "notes": "The page embeds a PDF of the death certificate via a private signed blob URL (dorisarchive.blob.core.windows.net). That is a captured/embedded file, not an external reference to a separately-held source document, so it is not reported in external_refs. A 'Purchase Certified Copy' link is present but is an order link, excluded per rules."
+}

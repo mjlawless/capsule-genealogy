@@ -1,4 +1,4 @@
-"""v0.2.3 — two things the owner saw in the popup on a Find a Grave memorial.
+"""v0.2.3 — two things seen in the popup on a Find a Grave memorial.
 
 1. A long empty yellow bar under the title: the version banner. It is `hidden`, but
    `.row { display: flex }` is an author rule and beats the browser's `[hidden]` rule.

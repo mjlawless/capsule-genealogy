@@ -1,0 +1,337 @@
+{
+  "personas": [
+    {
+      "id": "43c1bba62c3349d9971b1449e9b0cca1",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "role": "groom",
+      "label": "Robert Euim"
+    },
+    {
+      "id": "096891c3ea49453abcd43dd0100d1abd",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "role": "bride",
+      "label": "Rosa Garbett"
+    }
+  ],
+  "snippets": [
+    {
+      "id": "8b4c1b2c0351405a859361ece5b200fc",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "verbatim_text": "Name: Robert Euim",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "5a67e084c3704ad5a88f622f0f962de2",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "verbatim_text": "Soundex: E500",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "e85a1886338043bd976ae7d06e1c5e7a",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "verbatim_text": "Name: Rosa Garbett",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "486f0501465a4853a1c11e30a6c5f118",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "verbatim_text": "Soundex: G613",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "7a74890d15ba4abda9d78e96ec605924",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "verbatim_text": "Type: Marriage Certificate",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "27d2f60aa3564fd887962138cd873128",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "verbatim_text": "Borough: Kings (Brooklyn)",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "642fd428319b4e8c9f40ada6f31437aa",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "verbatim_text": "Date: 1886-07-26",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "3c44e0adae424d4297f8db5238f3c4bb",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "verbatim_text": "Certificate: 2448",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "a8959d05ce1d4c8b91b61ccef1aa9a86",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "verbatim_text": "Type: Marriage Certificate",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "83ea92449ca946fd9298de702316dd31",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "verbatim_text": "Borough: Kings (Brooklyn)",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "e3cce96236c94878b6c8da028f005cd4",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "verbatim_text": "Date: 1886-07-26",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "9f9981d14bed4f6d828eb6ccca35eff9",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "verbatim_text": "Certificate: 2448",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    }
+  ],
+  "assertions": [
+    {
+      "id": "548539a94317401589a894184b769879",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "persona_id": "43c1bba62c3349d9971b1449e9b0cca1",
+      "snippet_id": "8b4c1b2c0351405a859361ece5b200fc",
+      "field": "name",
+      "verbatim_value": "Robert Euim",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-09-24T18:39:00.732594Z"
+    },
+    {
+      "id": "1e959716d87c412a90218617c1de2822",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "persona_id": "43c1bba62c3349d9971b1449e9b0cca1",
+      "snippet_id": "5a67e084c3704ad5a88f622f0f962de2",
+      "field": "soundex",
+      "verbatim_value": "E500",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-09-24T18:39:00.732594Z"
+    },
+    {
+      "id": "af7da7dc2fbe4166931e77a6f798cde2",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "persona_id": "096891c3ea49453abcd43dd0100d1abd",
+      "snippet_id": "e85a1886338043bd976ae7d06e1c5e7a",
+      "field": "name",
+      "verbatim_value": "Rosa Garbett",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-09-24T18:39:00.732594Z"
+    },
+    {
+      "id": "aefee92b7c464642baa4bdb2cea543aa",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "persona_id": "096891c3ea49453abcd43dd0100d1abd",
+      "snippet_id": "486f0501465a4853a1c11e30a6c5f118",
+      "field": "soundex",
+      "verbatim_value": "G613",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-09-24T18:39:00.732594Z"
+    },
+    {
+      "id": "4d2d0df9317f4fbb9689ba431f74e11f",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "persona_id": "43c1bba62c3349d9971b1449e9b0cca1",
+      "snippet_id": "7a74890d15ba4abda9d78e96ec605924",
+      "field": "type",
+      "normalized_field": "record_type",
+      "verbatim_value": "Marriage Certificate",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-09-24T18:39:00.732594Z"
+    },
+    {
+      "id": "a4d376365ce04cc39a954ce906a3c666",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "persona_id": "43c1bba62c3349d9971b1449e9b0cca1",
+      "snippet_id": "27d2f60aa3564fd887962138cd873128",
+      "field": "borough",
+      "verbatim_value": "Kings (Brooklyn)",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-09-24T18:39:00.732594Z"
+    },
+    {
+      "id": "342ca9013f3648d69a21ccd17d010bf6",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "persona_id": "43c1bba62c3349d9971b1449e9b0cca1",
+      "snippet_id": "642fd428319b4e8c9f40ada6f31437aa",
+      "field": "date",
+      "normalized_field": "marriage_date",
+      "verbatim_value": "1886-07-26",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-09-24T18:39:00.732594Z"
+    },
+    {
+      "id": "c30b217fa14349cc933af8d98991e583",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "persona_id": "43c1bba62c3349d9971b1449e9b0cca1",
+      "snippet_id": "3c44e0adae424d4297f8db5238f3c4bb",
+      "field": "certificate",
+      "verbatim_value": "2448",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-09-24T18:39:00.732594Z"
+    },
+    {
+      "id": "b40ff9b9eec04b8b969acc7e01eddb8b",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "persona_id": "096891c3ea49453abcd43dd0100d1abd",
+      "snippet_id": "a8959d05ce1d4c8b91b61ccef1aa9a86",
+      "field": "type",
+      "normalized_field": "record_type",
+      "verbatim_value": "Marriage Certificate",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-09-24T18:39:00.732594Z"
+    },
+    {
+      "id": "347798d23ea44eb499a74c4f30ef63ef",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "persona_id": "096891c3ea49453abcd43dd0100d1abd",
+      "snippet_id": "83ea92449ca946fd9298de702316dd31",
+      "field": "borough",
+      "verbatim_value": "Kings (Brooklyn)",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-09-24T18:39:00.732594Z"
+    },
+    {
+      "id": "4e727e1c2e8d43db9507cc018737da6b",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "persona_id": "096891c3ea49453abcd43dd0100d1abd",
+      "snippet_id": "e3cce96236c94878b6c8da028f005cd4",
+      "field": "date",
+      "normalized_field": "marriage_date",
+      "verbatim_value": "1886-07-26",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-09-24T18:39:00.732594Z"
+    },
+    {
+      "id": "5ac85ffcb73d445c808940f02c5743c2",
+      "source_id": "c4c3bc1db60c42e0afc50172031851f1",
+      "persona_id": "096891c3ea49453abcd43dd0100d1abd",
+      "snippet_id": "9f9981d14bed4f6d828eb6ccca35eff9",
+      "field": "certificate",
+      "verbatim_value": "2448",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-09-24T18:39:00.732594Z"
+    }
+  ],
+  "notes": "The Type, Borough, Date and Certificate facts are printed once and apply to the whole marriage record; I attached them to both personas. The page embeds and links a PDF of the certificate (a private signed blob URL) — this is the captured image of the record, not an external reference to a different document, so it is not reported in external_refs. The 'Purchase Certified Copy' link is an order link and is excluded per rules."
+}

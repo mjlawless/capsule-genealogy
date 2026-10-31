@@ -1,8 +1,7 @@
 # Extraction evals
 
 Real captured pages + hand-labeled expected extractions. The guardrail that a
-prompt or model change never silently regresses extraction on the owner's real
-records.
+prompt or model change never silently regresses extraction on real records.
 
 ## Layout
 
@@ -14,8 +13,8 @@ Each fixture is one folder under `fixtures/<name>/`:
 | `meta.json`     | yes        | Provenance: `{ "url", "gating": "public"\|"gated", "record_type"?, "notes"? }`. |
 | `snapshot.html` | **no** (gitignored) | The captured page. Raw pages may be gated/copyright/PII (plan §11), so they stay local — re-capture to seed one. |
 
-Because `snapshot.html` is local-only, evals **run where the owner holds the
-captures**, not in CI. CI still validates that every committed `expected.json` /
+Because `snapshot.html` is local-only, evals **run where the captures are
+held**, not in CI. CI still validates that every committed `expected.json` /
 `meta.json` is schema-valid (`tests/test_evals.py`).
 
 ## Run

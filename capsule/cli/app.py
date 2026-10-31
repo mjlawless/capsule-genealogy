@@ -807,8 +807,8 @@ def ingest(
     )
 
 
-#: The vision transcriber's default model and thinking effort (REQ-006). Owner's call on
-#: 2026-09-28, after the model trial: Sonnet 5.5 at high. It was about 6x cheaper and 6x
+#: The vision transcriber's default model and thinking effort (REQ-006), chosen on
+#: 2026-09-28 after a model trial: Sonnet 5.5 at high. It was about 6x cheaper and 6x
 #: faster than Opus 5 at high on the gold certificate, but it never hedges a doubtful
 #: reading, so its misreads surface only through `needs_review` on the review page.
 #: Configurable per run; the DOM extractor keeps DEFAULT_MODEL and sends no effort.
@@ -896,7 +896,7 @@ def eval_transcript(
     No model call — run `capsule transcribe <capture>` first to produce a transcript.
     Fails (exit 1) on a confident wrong or missing HARD field (the parents' names),
     or a missing expected image-vs-index conflict. `honest` = marked uncertain,
-    which is a pass; `disputed` = gold awaiting the owner, never scored.
+    which is a pass; `disputed` = gold awaiting review, never scored.
     """
     from capsule.evals.transcript_eval import load_gold, score_transcript
 

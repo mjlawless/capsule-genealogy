@@ -1,0 +1,48 @@
+{
+  "spec_version": "capture-folder/v1",
+  "capture_id": "20260714-a860historicalvitalrecordsnycgov-4cfca63f",
+  "tool_version": "0.0.0",
+  "created_at": "2026-07-14T20:35:58.561520Z",
+  "source": {
+    "id": "4cfca63f623245b490917104973977bc",
+    "url": "https://a860-historicalvitalrecords.nyc.gov/view/197790",
+    "title": "B-K-1887-0011687 - Historical Vital Records of NYC",
+    "site_name": "a860-historicalvitalrecords.nyc.gov",
+    "record_type": "birth",
+    "gating_status": "public",
+    "copyright_flag": false,
+    "source_quality": "original",
+    "source_quality_rationale": "The page embeds the actual birth certificate PDF (B-K-1887-0011687.pdf) via an embed element and direct link; the surrounding fields are index metadata but the record image itself is present on the page.",
+    "content_hash": "f4a77f52cf61d5967891213241aa8352fb93e5bf787b1313692b2c63ff7fa9b4"
+  },
+  "archive": {
+    "local_snapshot": "snapshot.html",
+    "sha256": "9de3884e0d7e2965b84415aa2c4fa0e8433fb310415ddc82d64be67b80e17901",
+    "captured_at": "2026-07-14T20:35:58.563021Z",
+    "wayback_url": null
+  },
+  "media": [
+    {
+      "path": "media/0-record.pdf",
+      "source_url": null,
+      "mime": "application/pdf",
+      "provenance": "render:page-pdf"
+    },
+    {
+      "path": "media/1-b-k-1887-0011687.pdf",
+      "source_url": "https://dorisarchive.blob.core.windows.net/reference/REC0051_VitalRecords/Births/Kings/1887/B-K-1887-0011687.pdf",
+      "mime": "application/pdf",
+      "provenance": "page:embedded"
+    }
+  ],
+  "hashes": {
+    "algo": "sha256",
+    "files": {
+      "snapshot.html": "9de3884e0d7e2965b84415aa2c4fa0e8433fb310415ddc82d64be67b80e17901",
+      "extraction.json": "f4a77f52cf61d5967891213241aa8352fb93e5bf787b1313692b2c63ff7fa9b4",
+      "citation.json": "1799e2e46b1b3922332860806bbcbb0d935f5d69afe92ded7c4a83e841154d7d",
+      "media/0-record.pdf": "261b3bfae310bd72dc92c8fde853e0d3ccaa93401fb6e350b4b6c884d95ce4b5",
+      "media/1-b-k-1887-0011687.pdf": "1187a12d6b864d2ef1e37a2bf45fc66f389651f45d7bc84a57261484c2a1e58e"
+    }
+  }
+}

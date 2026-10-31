@@ -4,12 +4,12 @@ A *fixture* is one real capture: `snapshot.html` (the page), `expected.json` (th
 extraction a correct run must produce, hand-labeled) and `meta.json` (provenance).
 `run_eval` makes the SAME single extraction call the pipeline makes on the page,
 then `score` compares the model's output to the gold field-by-field — so a prompt
-or model change that regresses on the owner's real records is caught, not silently
+or model change that regresses on real records is caught, not silently
 shipped.
 
 `expected.json` / `meta.json` are committed; `snapshot.html` stays local
 (gitignored — captured pages may be gated/copyright/PII), so evals run where the
-owner holds the captures, not in CI. `score` is a pure function and is unit-tested
+captures are held, not in CI. `score` is a pure function and is unit-tested
 offline with synthetic fixtures; only `run_eval` (the live model call) costs money.
 """
 from __future__ import annotations

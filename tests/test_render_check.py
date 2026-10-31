@@ -81,6 +81,26 @@ class TestBlankRatio:
         assert blank_ratio(b"not a pdf at all") is None
         assert blank_ratio(b"") is None
 
+    def test_a_page_too_big_to_measure_returns_None_rather_than_raising(self, monkeypatch):
+        """Measuring allocates full-page images after the render; a page that runs the
+        machine out of memory there is "cannot judge" too, never a crashed capture."""
+        from PIL import Image
+
+        from capsule.pipeline.render_check import blank_ratio
+
+        def out_of_memory(*_args, **_kwargs):
+            raise MemoryError
+
+        monkeypatch.setattr(Image.Image, "point", out_of_memory)
+        assert blank_ratio(BLANK) is None
+
+    def test_a_light_grey_page_is_not_near_white(self):
+        """Near-white means every channel at or above the cut. A light grey fill (each
+        channel ~230) is ink a human sees, so none of it counts as white."""
+        from capsule.pipeline.render_check import blank_ratio
+
+        assert blank_ratio(_pdf(b"0.9 0.9 0.9 rg\n0 0 612 792 re f\n")) == 0.0
+
 
 class TestLooksBlank:
     def test_BUG_001_white_fill_over_text_is_caught(self):

@@ -1,6 +1,6 @@
 """REQ-006 T4 — the transcript layer: its own tables, its own folder, never evidence.
 
-Owner ruling R1 (2026-09-24): transcribed values live in `transcription` /
+Transcribed values live in `transcription` /
 `transcript_field`, NEVER in `assertion` — a machine transcript is a derivative
 reading aid (§5.1) and must not be mistakable for the record or able to raise a
 grade (§5.2). On disk it is `transcript/<id>/`, excluded from the hash manifest

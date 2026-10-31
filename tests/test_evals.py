@@ -48,7 +48,7 @@ def test_committed_fixture_gold_is_schema_valid():
     """Every committed fixture's expected.json/meta.json must be well-formed.
 
     Runs in CI (needs no local snapshot.html): guards the hand-labeled gold
-    against a typo silently breaking `capsule eval` when the owner runs it.
+    against a typo silently breaking `capsule eval` when it is run.
     """
     root = Path(__file__).resolve().parent.parent / "evals" / "fixtures"
     golds = sorted(root.glob("*/expected.json"))

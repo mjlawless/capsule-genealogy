@@ -38,7 +38,7 @@ def test_a_new_install_uses_the_per_user_data_folder(elsewhere):
 
 
 def test_an_existing_checkout_archive_is_kept(elsewhere):
-    """The owner's ./data (hundreds of captures, a launchd service) must not be stranded."""
+    """A checkout's existing ./data (an archive, maybe a running service) must not be stranded."""
     from capsule.config import data_dir
 
     tmp_path, _ = elsewhere

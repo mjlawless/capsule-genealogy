@@ -2,7 +2,7 @@
 
 The buttons are rendered only on the served page; the static file never has them.
 A correction's eval fixture is written beside the archive's database, never into
-the repo, because it holds the record's values (owner ruling, 2026-10-23).
+the repo, because it holds the record's values.
 """
 from __future__ import annotations
 

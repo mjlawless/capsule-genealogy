@@ -1,4 +1,4 @@
-"""v0.2 — after a capture made without an API key, a prompt says what a key adds (owner request).
+"""v0.2 — after a capture made without an API key, a prompt says what a key adds.
 
 Dismissable, self-dismissing after ~15 s (paused while the mouse is over it), and "Not today"
 quiets it for a day so it never nags on every capture. These run the shipped `showKeyPrompt`

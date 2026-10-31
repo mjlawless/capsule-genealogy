@@ -1,4 +1,4 @@
-"""REQ-011 — mark a capture as superseded by another (a lifecycle event, owner ruling 2026-10-21).
+"""REQ-011 — mark a capture as superseded by another (a lifecycle event).
 
 The live case: an armed Newspapers.com capture missed its image (BUG-022) and left a
 page-render-only source; the same page was then ingested, and that ingest is what the tree

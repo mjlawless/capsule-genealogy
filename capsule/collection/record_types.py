@@ -1,7 +1,7 @@
 """Group the model's free-text record types into the common categories a researcher uses.
 
 The reader writes a record type in its own words ("baptism", "Church Baptism Record",
-"baptism/birth index (search results)"), which on the owner's archive made 85 distinct
+"baptism/birth index (search results)"), which on one real archive made 85 distinct
 values for 476 captures. The index shows and filters by the category; the exact type stays
 in the capture (it is evidence of what the reader saw) and is shown in its detail. A
 display projection only: nothing stored changes.

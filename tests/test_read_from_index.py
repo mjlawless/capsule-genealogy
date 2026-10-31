@@ -1,4 +1,4 @@
-"""Reading captures saved without a key is chosen on the index page (owner, 2026-10-24).
+"""Reading captures saved without a key is chosen on the index page.
 
 A user who captured many pages before adding a key may not want them all read (each costs
 money). So the popup no longer reads everything: the served index offers a tick box on each

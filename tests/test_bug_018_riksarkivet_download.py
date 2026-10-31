@@ -16,7 +16,7 @@ These tests run the shipped `download-intercept.js` in node against a fake `chro
 a fake clock, so the real listener → stage → take path is exercised, not a restatement. Downloads land
 before the take here; the in-flight interleaving is not simulated.
 The live E2E (one armed capture on a `bildvisning` page returning `image_status: full`) is
-the owner's.
+a manual live check.
 """
 from __future__ import annotations
 

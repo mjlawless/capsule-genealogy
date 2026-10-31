@@ -1,0 +1,40 @@
+{
+  "spec_version": "capture-folder/v1",
+  "capture_id": "20260714-irishgenealogy-dc58e58b",
+  "tool_version": "0.0.0",
+  "created_at": "2026-07-14T15:31:04.675850Z",
+  "source": {
+    "id": "dc58e58bc46644d3b17a728360cbc580",
+    "url": "https://www.irishgenealogy.ie/view/?record_id=cima-3011398",
+    "title": "View Record – Irish Genealogy",
+    "site_name": "Irish Genealogy",
+    "record_type": "marriage",
+    "gating_status": "public",
+    "copyright_flag": false,
+    "source_quality": "derivative",
+    "content_hash": "80f34cae83a25fcb535f9f6e405ad304e62d2b87db3f0f8cd1468bc55e66ec9e"
+  },
+  "archive": {
+    "local_snapshot": "snapshot.html",
+    "sha256": "244d7b7633613ec3094d6d0887457a12b4c2ea24cd9c77e341ef92f63421ecef",
+    "captured_at": "2026-07-14T15:31:04.679395Z",
+    "wayback_url": null
+  },
+  "media": [
+    {
+      "path": "media/0-record.pdf",
+      "source_url": null,
+      "mime": "application/pdf",
+      "provenance": "render:page-pdf"
+    }
+  ],
+  "hashes": {
+    "algo": "sha256",
+    "files": {
+      "snapshot.html": "244d7b7633613ec3094d6d0887457a12b4c2ea24cd9c77e341ef92f63421ecef",
+      "extraction.json": "80f34cae83a25fcb535f9f6e405ad304e62d2b87db3f0f8cd1468bc55e66ec9e",
+      "citation.json": "1eaf364f4b2450d097040da9ec9e2803e180bfa11b6a03ad87cfd4aec9228e79",
+      "media/0-record.pdf": "1dcebf8d88ee040792e8af2d6227033c72a3d76a695c5f4da56ed1eabd3b4455"
+    }
+  }
+}

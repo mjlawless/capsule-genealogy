@@ -551,7 +551,7 @@ async function postAndShape(o) {
     // is visible rather than a silent change to what the archive contains.
     pdf_hid: render.hid || [],
     // REQ-015: the full page (page.mhtml), and how many ads were hidden from it
-    // and from the PDF (owner 2026-10-29: hidden by default).
+    // and from the PDF (hidden by default).
     full_page: fullPageSkipped ? "skipped" : "attached",
     full_page_skipped_reason: fullPageSkipped,
     ads_hidden: (render.ads || []).length,

@@ -90,7 +90,7 @@ def _jpeg(width: int, height: int) -> str:
 
 
 def _real_snapshots():
-    """The on-disk Archion captures, if this checkout has the owner's data."""
+    """The on-disk Archion captures, if this checkout holds a real archive."""
     if not _CAPTURES.is_dir():
         return []
     return sorted(_CAPTURES.glob("*kirchenbcheronlinemitarchion*/snapshot.html"))

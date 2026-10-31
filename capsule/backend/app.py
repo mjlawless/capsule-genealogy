@@ -149,8 +149,7 @@ class Settings(BaseModel):
     token: Optional[str] = None
     # Where a correction auto-writes its eval fixture (the flywheel). None means
     # `eval-fixtures/` beside the database (`correction_fixtures_root`): a fixture holds
-    # the record's values, so it stays in the archive, never in the repo (owner ruling,
-    # 2026-10-23); a test with a tmp database therefore writes to tmp as well.
+    # the record's values, so it stays in the archive, never in the repo; a test with a tmp database therefore writes to tmp as well.
     fixtures_root: Optional[Path] = None
 
     def correction_fixtures(self) -> Path:
@@ -997,7 +996,7 @@ def capture_folder_page(
     settings: Settings = Depends(get_settings),
     repository: Repository = Depends(get_repository),
 ) -> HTMLResponse:
-    """REQ-015: one capture, readable. The record as the index shows it (with the owner's
+    """REQ-015: one capture, readable. The record as the index shows it (with the user's
     corrections overlaid, as on the served index), its media in place, the full page and page text,
     what the manifest says, and every file with a readable and a raw link."""
     folder = resolve_capture_folder(settings.captures_root, capture_id)
@@ -1021,7 +1020,7 @@ def capture_file(
     relative `Local`/`Document` links resolve — the backend, not the filesystem,
     is the origin when the index is viewed at http://127.0.0.1:PORT/.
 
-    Unauthenticated like `GET /` (localhost-only, the owner's own archive); the
+    Unauthenticated like `GET /` (localhost-only, the user's own archive); the
     same accepted token-disclosure tradeoff applies. A traversing path is 422, an
     unknown capture 404.
     """
@@ -1739,7 +1738,7 @@ def _capture_locked(
                 follow_up=follow_up,
                 page_label=req.page_label,
                 # REQ-010 — on a `captured` event, `error` says why the record image is
-                # missing; the capture itself succeeded (owner deference, 2026-10-21).
+                # missing; the capture itself succeeded.
                 error=image_reason,
             )
         finally:
@@ -1840,8 +1839,8 @@ def settings_api_key(
 
 @app.post("/settings/read-pending")
 def settings_read_pending(_auth: None = Depends(require_token)) -> dict:
-    """Retired: it read EVERY waiting capture, which may not be what the user wants (owner,
-    2026-10-24). A 0.2.5 popup still calls it, so it answers with where to go instead."""
+    """Retired: it read EVERY waiting capture, which may not be what the user wants. A
+    0.2.5 popup still calls it, so it answers with where to go instead."""
     raise HTTPException(
         status_code=410,
         detail=(

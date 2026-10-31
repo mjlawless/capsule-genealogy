@@ -122,7 +122,7 @@ def waiting_captures(captures_root: Union[str, Path]) -> list[str]:
 
     Narrower than `pending_captures`: a capture whose reading was set aside (reinstated) is
     pending again for `capsule extract`, an explicit request, but the index never offers to
-    read it a second time (owner, 2026-10-24: "not yet").
+    read it a second time (not offered yet).
     """
     root = Path(captures_root)
     return [c for c in pending_captures(root) if not _ever_superseded(root / c)]
@@ -135,7 +135,7 @@ def choose_readable(
 
     Readable means still waiting to be read: archived without a key and never replaced by a
     reading, even one later set aside by a reinstatement. A capture that was read (with a key,
-    or later by `capsule extract`) is never read again from here (owner, 2026-10-24).
+    or later by `capsule extract`) is never read again from here.
     Duplicates are dropped; order is kept.
     """
     root = Path(captures_root)
@@ -199,7 +199,7 @@ def extract_capture(
 
     A capture is read at most once: one read before and then reinstated (the reading set
     aside) is refused too, checked under the claim, so it is never paid for twice. Reading
-    again is not offered yet (owner ruling 2026-10-24, for the index page and the CLI alike).
+    again is not offered yet, on the index page or in the CLI.
 
     Raises `ValueError` if the capture is not pending (it was already read, or is a document
     capture, which has no page text to read) and `FileNotFoundError` if it does not exist.
@@ -529,7 +529,7 @@ def start_background_reading(
     """Read the chosen captures on a worker thread; returns the state it started with.
 
     The caller chooses (the index page's ticks, filtered by `choose_readable`): nothing is
-    read just because it is pending (owner, 2026-10-24). Raises `ReadingBusy` while another
+    read just because it is pending. Raises `ReadingBusy` while another
     run is going, so the page never claims to have started a reading it did not. Each capture
     is read with the same `extract_capture` as `capsule extract`, which re-checks that it is
     still waiting, so every safety it has applies here.

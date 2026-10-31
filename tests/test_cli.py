@@ -4,7 +4,7 @@ All OFFLINE. The real HttpxFetcher is driven through httpx.MockTransport (no
 network); the `capsule capture` command is exercised via Typer's CliRunner with
 the fetcher/agent factories monkeypatched to fakes, so no request or API call
 ever leaves the process. The first genuinely live run is a separate, explicit
-step the owner triggers.
+step someone triggers by hand.
 """
 from __future__ import annotations
 

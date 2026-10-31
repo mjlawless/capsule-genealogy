@@ -24,7 +24,7 @@ captures/<capture_id>/
 `<capture_id>` is the **folder-name form** of the capture identifier — see
 §2 for its relationship to the canonical `source.id`.
 
-## 2. Capture ID (PM decision D6)
+## 2. Capture ID
 
 Two distinct identifiers exist for a capture, deliberately:
 
@@ -353,7 +353,7 @@ An M3 **capsule** is a superset of a capture folder:
 ├── agent_log/...
 └── attach/           (NEW at M3: guided-attach artifacts —
                         Ancestry-formatted citation text, fact summary,
-                        GEDCOM 7 fragment; see docs/plan.md §5, §13 M3)
+                        GEDCOM 7 fragment)
 ```
 
 - `spec_version` bumps from `"capture-folder/v1"` to `"capsule/v1"`.

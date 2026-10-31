@@ -1,4 +1,4 @@
-"""The Ancestry work queue is off unless deliberately enabled (owner ruling, 2026-10-21).
+"""The Ancestry work queue is off unless deliberately enabled.
 
 `/ancestry/seed`, `/ancestry/next` and `capsule ancestry seed` pace an agent through a list of
 records in the researcher's logged-in session. A public install does not offer that until

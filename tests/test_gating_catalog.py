@@ -2,7 +2,7 @@
 
 From the free-sites test pass (2026-10-22): every Find a Grave memorial was saved as gated
 because of a hidden "Sign out successful" dialog, and Trove (signed out) was gated too. On
-the owner's archive the new rule changes only those (8 Find a Grave pages, gated -> public)
+a real archive the new rule changes only those (8 Find a Grave pages, gated -> public)
 in the unsafe direction; everything else it changes moves toward gated.
 """
 from __future__ import annotations

@@ -3,3 +3,6 @@
 *.sh text eol=lf
 # A saved page as Chrome writes it: CRLF line endings are part of the format, keep the bytes.
 *.mhtml binary
+# Sample captures are checked against the SHA-256 hashes in their manifests: keep the bytes
+# exactly as captured, with no line-ending conversion on Windows checkouts.
+samples/** -text

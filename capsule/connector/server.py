@@ -127,7 +127,7 @@ def build_server(settings: ConnectorSettings, archive: Optional[Archive] = None)
         written, and the fields flagged for the researcher to check."""
         return _answer(lambda: archive.get_transcript(capture_id))
 
-    if settings.page_text:  # owner ruling (REQ-012 §9.2): off unless the user turns it on
+    if settings.page_text:  # off unless the user turns it on
 
         @server.tool(title="Read a captured page's text", annotations=_READ_ONLY)
         def get_page_text(capture_id: str, max_chars: int = 20000) -> dict[str, Any]:

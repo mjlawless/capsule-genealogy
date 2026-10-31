@@ -86,16 +86,16 @@ const HIDE_SELECTORS = [
   "#capsule-key-prompt",
 ];
 
-// -- Ads (REQ-015 §C, owner 2026-10-29: "hide the ads by default") -----------------
+// -- Ads (REQ-015 §C: hidden by default) ------------------------------------------
 //
 // Hidden for the PDF and the full page by the conventions ad networks use, and NOTHING
 // broader. Deliberately not iframes, embeds, objects or dialogs in general: certificate
 // sites show the record itself in an <embed> or <iframe> (media-detect.js), and hiding one
 // would erase the evidence from its own archive. An iframe goes only when its host is an
-// ad network. Measured before shipping on all 478 captured pages in the owner's archive: the
+// ad network. Measured before shipping on 478 captured pages of a real archive: the
 // matches were Find a Grave's ad slots, Ancestry's invisible 0x0 tracking frames and
 // Newspapers.com's ad frames, and none held any text of a fact read from its record.
-// tests/test_req_015_render_ads.py keeps this list from growing into record content.
+// tests/test_req_015_full_page.py keeps this list from growing into record content.
 const AD_SELECTORS = [
   '[id^="div-gpt-ad"]', '[id*="google_ads"]', "ins.adsbygoogle", "[data-ad]",
   "[data-ad-slot]", "[data-ad-unit]", "[data-google-query-id]", '[id^="ad-"]',

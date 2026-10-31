@@ -12,7 +12,7 @@ Each gold field gets one outcome, from the best-matching transcribed field:
   `[illegible]`, …) or is status illegible. §8.1: "an honest [?] is a pass."
 * `wrong`    — differs with no marker: a confident misreading.
 * `missing`  — no transcribed field matched.
-* `disputed` — the gold value itself is questioned and awaiting the owner; shown,
+* `disputed` — the gold value itself is questioned and awaiting review; shown,
   never scored (the eval has found the gold wrong before).
 
 The gate: no `wrong` or `missing` on a `hard` field, and every expected

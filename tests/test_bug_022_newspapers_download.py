@@ -8,7 +8,7 @@ dotted-suffix correlation rule refuses. Same shape as BUG-018 (Riksarkivet).
 
 These reuse BUG-018's node harness (the shipped `download-intercept.js` against a fake
 `chrome` and a fake clock), so the real listener → stage → take path is exercised. The live
-E2E (one armed Newspapers.com capture returning `image_status: full`) is the owner's.
+E2E (one armed Newspapers.com capture returning `image_status: full`) needs a subscriber's live session.
 """
 from __future__ import annotations
 

@@ -123,7 +123,7 @@ A capture whose media is a scanned original (an NYC certificate, a register page
 may carry one or more **machine transcripts**: what a vision transcriber read from
 the image, field by field. A transcript is a **derivative reading aid, not the
 record** — the image stays the evidence, and nothing here is an assertion or can
-raise a grade (REQ-006 §5.1–5.2, owner ruling R1). It follows the notes rule:
+raise a grade (REQ-006 §5.1–5.2). It follows the notes rule:
 **excluded from the hash manifest**, addable to a sealed capture at any time.
 
 ```

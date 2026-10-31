@@ -410,6 +410,71 @@ class TestCorrections:
         assert caller_assertion.supersedes_id is None
 
 
+class TestSchemaIsOneTransaction:
+    """schema.sql runs as ONE transaction. Statement by statement, each of its ~60 CREATEs was
+    its own commit, and a commit waits for the disk: ~0.7s per new database where the flush is
+    real (Windows), which made most of the Windows test run. One transaction also means a
+    schema that fails part way leaves nothing half-built."""
+
+    @staticmethod
+    def _failing_schema(tmp_path, monkeypatch):
+        from capsule.store import repository as repository_module
+
+        bad = tmp_path / "schema_failing_at_the_end.sql"
+        bad.write_text(
+            repository_module._SCHEMA_PATH.read_text(encoding="utf-8") + "\nTHIS IS NOT SQL;\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(repository_module, "_SCHEMA_PATH", bad)
+
+    @staticmethod
+    def _tables(db_path):
+        connection = sqlite3.connect(str(db_path))
+        try:
+            return connection.execute("SELECT name FROM sqlite_master").fetchall()
+        finally:
+            connection.close()
+
+    def test_a_schema_failing_part_way_leaves_no_tables(self, tmp_path, monkeypatch):
+        from capsule.store.repository import Repository
+
+        self._failing_schema(tmp_path, monkeypatch)
+        with pytest.raises(sqlite3.DatabaseError):
+            Repository(tmp_path / "x.db")
+        assert self._tables(tmp_path / "x.db") == []
+
+    def test_the_ledger_schema_failing_part_way_leaves_no_tables(self, tmp_path, monkeypatch):
+        from capsule.store.ledger import AncestryLedger
+
+        self._failing_schema(tmp_path, monkeypatch)
+        with pytest.raises(sqlite3.DatabaseError):
+            AncestryLedger(tmp_path / "x.db")
+        assert self._tables(tmp_path / "x.db") == []
+
+    def test_foreign_keys_stay_on(self, tmp_path):
+        """The file's own `PRAGMA foreign_keys` is a no-op inside a transaction."""
+        from capsule.store.ledger import AncestryLedger
+        from capsule.store.repository import Repository
+
+        repo = Repository(tmp_path / "a.db")
+        ledger = AncestryLedger(tmp_path / "b.db")
+        try:
+            assert repo.connection.execute("PRAGMA foreign_keys").fetchone() == (1,)
+            assert ledger.connection.execute("PRAGMA foreign_keys").fetchone() == (1,)
+        finally:
+            repo.connection.close()
+            ledger.close()
+
+    def test_reopening_an_existing_database_keeps_its_rows(self, tmp_path):
+        from capsule.store.repository import Repository
+
+        first = Repository(tmp_path / "x.db")
+        tables = self._tables(tmp_path / "x.db")
+        first.connection.close()
+        Repository(tmp_path / "x.db").connection.close()
+        assert self._tables(tmp_path / "x.db") == tables
+
+
 class TestConnectionLifecycle:
     def test_BUG_schema_init_failure_closes_connection(self, tmp_path, monkeypatch):
         """MEDIUM-5 code review finding: a schema-init failure must not

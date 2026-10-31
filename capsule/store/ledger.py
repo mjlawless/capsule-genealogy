@@ -33,10 +33,9 @@ from pathlib import Path
 from typing import Callable, Iterable, Optional, Sequence
 
 from capsule.pipeline.ancestry import parse_apid
+from capsule.store.repository import create_schema
 
 _logger = logging.getLogger(__name__)
-
-_SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 
 # How long the queue waits between handing out records: human research pace, one record
 # at a time, in the user's own logged-in session.
@@ -254,9 +253,14 @@ class AncestryLedger:
         daily_cap: int = DEFAULT_DAILY_CAP,
     ) -> None:
         self.connection = sqlite3.connect(str(db_path))
-        self.connection.execute("PRAGMA foreign_keys = ON")
-        self.connection.executescript(_SCHEMA_PATH.read_text(encoding="utf-8"))
-        _migrate_events(self.connection)
+        try:
+            self.connection.execute("PRAGMA foreign_keys = ON")
+            create_schema(self.connection)
+            _migrate_events(self.connection)
+        except Exception:
+            # Closing rolls back a schema that failed part way and frees the write lock.
+            self.connection.close()
+            raise
         self._now = now or (lambda: datetime.now(timezone.utc))
         self._new_id = new_id or (lambda: uuid.uuid4().hex)
         self.pace_seconds = pace_seconds

@@ -81,37 +81,39 @@ def blank_ratio(pdf_bytes: bytes) -> Optional[float]:
         return None
 
     try:
+        from PIL import ImageChops
+
         document = pdfium.PdfDocument(pdf_bytes)
         try:
             if len(document) == 0:
                 return None
             bitmap = document[0].render(scale=_DPI / 72)
-            # Read the raw buffer rather than going through PIL: it saves a dependency,
-            # and the near-white test is channel-order-independent (every channel must
-            # be high), so BGRA vs RGBA does not matter here.
-            width, height = bitmap.width, bitmap.height
-            stride, channels = bitmap.stride, bitmap.n_channels
-            buffer = bytes(bitmap.buffer)
+            if bitmap.width == 0 or bitmap.height == 0 or bitmap.n_channels < 3:
+                return None
+            # Alpha is dropped, not composited, on purpose: pdfium renders on an opaque
+            # white backing, so a transparent pixel already reads as white — exactly as a
+            # human viewing the file would see it. convert() copies the pixels out of the
+            # bitmap before the document is closed.
+            image = bitmap.to_pil().convert("RGB")
         finally:
             document.close()
-    except Exception as exc:  # pdfium raises assorted types on bad input
+        # A pixel is near-white only when every channel is. Pillow builds that mask in C;
+        # testing pixel by pixel in Python took seconds on a large page. Inside the handler,
+        # because each step allocates a full-page image and a large page can run out of memory.
+        lut = [255 if value >= _NEAR_WHITE else 0 for value in range(256)] * 3
+        red, green, blue = image.point(lut).split()
+        mask = ImageChops.darker(red, ImageChops.darker(green, blue)).tobytes()
+    except Exception as exc:  # pdfium and Pillow raise assorted types on bad input
         _logger.warning("cannot rasterize the rendered PDF: %s", exc)
         return None
 
-    if width == 0 or height == 0 or channels < 3:
-        return None
+    width, height = image.size
     near_white = 0
     sampled = 0
     for y in range(0, height, _STRIDE):
-        row = y * stride
-        for x in range(0, width, _STRIDE):
-            offset = row + x * channels
-            sampled += 1
-            # Alpha (channel 4, when present) is ignored on purpose: pdfium renders on
-            # an opaque white backing, so a transparent pixel already reads as white —
-            # exactly as a human viewing the file would see it.
-            if all(buffer[offset + c] >= _NEAR_WHITE for c in range(3)):
-                near_white += 1
+        row = mask[y * width : (y + 1) * width : _STRIDE]
+        near_white += row.count(255)
+        sampled += len(row)
     if sampled == 0:
         return None
     return near_white / sampled

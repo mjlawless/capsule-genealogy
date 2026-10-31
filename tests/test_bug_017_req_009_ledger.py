@@ -5,7 +5,7 @@ duplicate recorded nothing after it, so a captured, verified record read as STAL
 
 REQ-009 (live 2026-09-28): the facing page of a two-page register opening (Ancestry
 62073:223848, a second viewer image) was refused as "already mined", because an Ancestry
-record id was the whole dedup identity. Owner ruling: a NULL `page_label` is the record's
+record id was the whole dedup identity. The rule: a NULL `page_label` is the record's
 default image and alone carries the record's mined state; an extra image has its own
 (apid, page_label) history.
 """

@@ -3,8 +3,8 @@
 Every assertion carries a link back to the source snippet that supports it
 and an evidence type (stated | calculated | estimated). Storage built on top
 of these models is append-only: corrections are new Assertion rows with
-`supersedes_id` set, never in-place edits. See docs/plan.md §13 and
-docs/specs/capture-folder-v1.md for the on-disk shape these models mirror.
+`supersedes_id` set, never in-place edits. See docs/specs/capture-folder-v1.md for the
+on-disk shape these models mirror.
 """
 from __future__ import annotations
 

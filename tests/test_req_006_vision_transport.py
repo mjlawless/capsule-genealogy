@@ -196,7 +196,7 @@ def test_anthropic_transport_without_effort_sends_no_thinking_settings():
 
 
 def test_transcribe_defaults_to_sonnet_5_5_at_high_effort():
-    """Owner's call after the 2026-09-28 model trial."""
+    """Chosen after the 2026-09-28 model trial."""
     from capsule.cli.app import TRANSCRIBE_EFFORT, TRANSCRIBE_MODEL
 
     assert (TRANSCRIBE_MODEL, TRANSCRIBE_EFFORT) == ("claude-sonnet-5-5", "high")

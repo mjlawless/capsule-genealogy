@@ -5,7 +5,7 @@ computer that turn the record page you are looking at into an archived, cited, h
 that you keep: the page, the record image, what the record says, and an Evidence Explained
 citation.
 
-> **Status: v0.2.7, early access.** Capsule has been used daily on real research (hundreds
+> **Status: v0.2.8, early access.** Capsule has been used daily on real research (hundreds
 > of captures from Irish parish registers, NYC vital records, Ancestry, Archion, Riksarkivet,
 > Newspapers.com and more). Installing it takes one command and a few clicks in Chrome. You can
 > try it **without an AI key**; add one later to have records read. The extension is on the
@@ -110,6 +110,9 @@ works: each one points you to the other.
      Open it, then double-click **Install Capsule**. If macOS says it can't verify it, click
      **Done**, open **System Settings › Privacy & Security**, scroll down, click **Open Anyway**
      and confirm.
+   - *To check a download,* compare it with the `SHA256SUMS` file on the same release page:
+     `shasum -a 256 -c SHA256SUMS --ignore-missing` in Terminal, or `Get-FileHash <file>` in
+     PowerShell.
 
    A window shows the install; it takes a minute or two. The Capsule extension's popup offers
    the same download if you added the extension first.
@@ -215,12 +218,12 @@ uv run pytest -q          # ~1,000 tests; the extension's logic is tested in nod
 uv run ruff check capsule tests
 ```
 
-The design is in [`docs/plan.md`](docs/plan.md). The on-disk formats are versioned
-contracts: [`capture-folder`](docs/specs/capture-folder-v2.md),
+The on-disk formats are versioned contracts:
+[`capture-folder`](docs/specs/capture-folder-v2.md),
 [`captures-index`](docs/specs/captures-index-v2.md) and
-[`capsule-db-v1`](docs/specs/capsule-db-v1.md). Numbered requirements and bug reports, each
-with its fix and evidence, are in [`docs/specs/`](docs/specs/) and [`docs/bugs/`](docs/bugs/).
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+[`capsule-db-v1`](docs/specs/capsule-db-v1.md). [`samples/`](samples/README.md) holds real
+captures of public historical records in those formats (the JSON only), to read or test
+against. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

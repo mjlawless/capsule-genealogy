@@ -1,6 +1,6 @@
 """The Agent abstraction — the single seam every Claude API call goes through.
 
-Per the plan (docs/plan.md §347) and CLAUDE.md: every model call is wrapped by
+Every model call is wrapped by
 one `Agent`, which records prompt + response + model + timestamp as an
 `AgentCall`. That record IS the `agent_log/<ts>-<agent>.json` payload written
 into a capture folder (see docs/specs/capture-folder-v1.md §5.1), and a human
@@ -31,7 +31,7 @@ _logger = logging.getLogger(__name__)
 # satisfy the manifest's agent-log allow-list (lowercase, digits, _-).
 _AGENT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 
-# Chosen by measurement, not by name (2026-10-22): on 31 of the owner's pages Opus 5.5 left
+# Chosen by measurement, not by name (2026-10-22): on 31 real record pages Opus 5.5 left
 # out the fewest facts, quoted every value word for word, labelled derived birth years
 # "calculated", and cost the same as Opus 4.8 before it. Change it the same way: run the
 # comparison, review the differences, then switch in a release.

@@ -1,0 +1,173 @@
+{
+  "personas": [
+    {
+      "id": "66382257a3564e4b8bd8cd89c8c9e3f3",
+      "source_id": "4cfca63f623245b490917104973977bc",
+      "role": "child (birth registrant)",
+      "label": "James Lawless"
+    }
+  ],
+  "snippets": [
+    {
+      "id": "cf98fa66a96e4e2daefd465982af5548",
+      "source_id": "4cfca63f623245b490917104973977bc",
+      "verbatim_text": "Name: James Lawless",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "d8fb776d9b664cc89aad08e7aa64e943",
+      "source_id": "4cfca63f623245b490917104973977bc",
+      "verbatim_text": "Soundex: L420",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "eab12e993ed24bb592a8f481e1be6b0c",
+      "source_id": "4cfca63f623245b490917104973977bc",
+      "verbatim_text": "Type: Birth Certificate",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "1adbadca96014af8882445be00d2e9b3",
+      "source_id": "4cfca63f623245b490917104973977bc",
+      "verbatim_text": "Borough: Kings (Brooklyn)",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "b8d7dbbae21a4b6bb9bd7c61413492d9",
+      "source_id": "4cfca63f623245b490917104973977bc",
+      "verbatim_text": "Date: 1887-12-24",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    },
+    {
+      "id": "96caa1f0dcdf426ab749e68ff7797c69",
+      "source_id": "4cfca63f623245b490917104973977bc",
+      "verbatim_text": "Certificate: 11687",
+      "anchor": {
+        "kind": "text",
+        "start": null,
+        "end": null,
+        "media_filename": null,
+        "bbox": null
+      }
+    }
+  ],
+  "assertions": [
+    {
+      "id": "58a4db4df17943ceb680c85edd8820e9",
+      "source_id": "4cfca63f623245b490917104973977bc",
+      "persona_id": "66382257a3564e4b8bd8cd89c8c9e3f3",
+      "snippet_id": "cf98fa66a96e4e2daefd465982af5548",
+      "field": "name",
+      "verbatim_value": "James Lawless",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-14T20:35:58.561520Z"
+    },
+    {
+      "id": "21c4e7dabf774b7a8cfd6987f1c39b41",
+      "source_id": "4cfca63f623245b490917104973977bc",
+      "persona_id": "66382257a3564e4b8bd8cd89c8c9e3f3",
+      "snippet_id": "d8fb776d9b664cc89aad08e7aa64e943",
+      "field": "soundex",
+      "verbatim_value": "L420",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-14T20:35:58.561520Z"
+    },
+    {
+      "id": "93c2d40cd37349d284c64b61fa419dfa",
+      "source_id": "4cfca63f623245b490917104973977bc",
+      "persona_id": "66382257a3564e4b8bd8cd89c8c9e3f3",
+      "snippet_id": "eab12e993ed24bb592a8f481e1be6b0c",
+      "field": "type",
+      "normalized_field": "record_type",
+      "verbatim_value": "Birth Certificate",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-14T20:35:58.561520Z"
+    },
+    {
+      "id": "22fc082fa3904904a6789061f31d6d25",
+      "source_id": "4cfca63f623245b490917104973977bc",
+      "persona_id": "66382257a3564e4b8bd8cd89c8c9e3f3",
+      "snippet_id": "1adbadca96014af8882445be00d2e9b3",
+      "field": "borough",
+      "verbatim_value": "Kings (Brooklyn)",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-14T20:35:58.561520Z"
+    },
+    {
+      "id": "3cd055ab78394866b4e73b424101c0ee",
+      "source_id": "4cfca63f623245b490917104973977bc",
+      "persona_id": "66382257a3564e4b8bd8cd89c8c9e3f3",
+      "snippet_id": "b8d7dbbae21a4b6bb9bd7c61413492d9",
+      "field": "date",
+      "normalized_field": "birth_date",
+      "verbatim_value": "1887-12-24",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-14T20:35:58.561520Z"
+    },
+    {
+      "id": "d9b7f0c0cba94daab6e2f5a55f6e0355",
+      "source_id": "4cfca63f623245b490917104973977bc",
+      "persona_id": "66382257a3564e4b8bd8cd89c8c9e3f3",
+      "snippet_id": "96caa1f0dcdf426ab749e68ff7797c69",
+      "field": "certificate",
+      "verbatim_value": "11687",
+      "normalized_value": null,
+      "annotation": null,
+      "evidence_type": "stated",
+      "confidence": null,
+      "supersedes_id": null,
+      "created_at": "2026-07-14T20:35:58.561520Z"
+    }
+  ],
+  "notes": "The Age field is present as a label but left blank, so it is omitted. The embedded PDF is a file offered/embedded by this page (a signed blob URL), not an external pointer to a different document, so it is not listed in external_refs. The 'Purchase Certified Copy' link is an order link and is excluded per rules. The page title also gives the identifier B-K-1887-0011687."
+}

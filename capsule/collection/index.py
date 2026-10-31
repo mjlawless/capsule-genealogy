@@ -184,8 +184,8 @@ def _row(record: CaptureRecord, interactive: bool) -> str:
         if record.awaiting_reading
         else ""
     )
-    # Served page only: tick the captures to read with AI. Never on one already read
-    # (owner, 2026-10-24), and never on the static file, which cannot ask for a reading.
+    # Served page only: tick the captures to read with AI. Never on one already read,
+    # and never on the static file, which cannot ask for a reading.
     pick = (
         f'<input type="checkbox" class="pick" data-capture-id="{esc(record.folder_name)}" '
         'title="Tick to read this capture with AI" aria-label="Tick to read this capture">'
@@ -284,7 +284,7 @@ def _meta(record: CaptureRecord, interactive: bool = False) -> list[tuple[str, s
         ("Captured", esc(record.captured_at or _PENDING)),
         ("Accessed", esc(record.access_date or _PENDING)),
     ]
-    # Wayback submission was dropped (owner, 2026-10-23): the local snapshot IS the
+    # Wayback submission was dropped: the local snapshot IS the
     # archive. The field stays in the capture format; a capture that ever carries one
     # still shows it.
     if record.wayback_url:
@@ -572,7 +572,7 @@ def _capture(record: CaptureRecord, interactive: bool) -> str:
             f'data-type="{esc(record.record_category)}"',
             f'data-site="{esc(record.site_name or "unknown")}"',
             f'data-status="{esc(record.status)}"',
-            # Read by AI, waiting to be read, or a file that is not read (owner, 2026-10-24).
+            # Read by AI, waiting to be read, or a file that is not read.
             f'data-read="{esc(record.reading)}"',
             f'data-gating="{esc(record.gating)}"',
             # The full ISO timestamp, so sorting separates two captures made on
@@ -598,7 +598,7 @@ def _controls(count: int) -> str:
     return (
         '<div class="controls">'
         '<input id="q" type="search" placeholder="Filter captures…" aria-label="Filter captures">'
-        # Record and site take several choices at once (owner, 2026-10-23): a checkbox list
+        # Record and site take several choices at once: a checkbox list
         # in a dropdown, filled by the script from the rows. Status stays a single choice.
         '<details class="ms" id="f-type" data-all="All records" data-noun="record types">'
         '<summary aria-label="Filter by record type">All records</summary>'
@@ -661,7 +661,7 @@ def render_index(
         else ""
     )
     # Served page only, and only while something is waiting: tick captures, then read them
-    # with the user's own key (owner, 2026-10-24: never everything at once by default).
+    # with the user's own key (never everything at once by default).
     waiting = sum(1 for record in records if record.awaiting_reading)
     read_bar = (
         f'<div class="readbar" id="readbar" data-key="{"set" if key_set else "missing"}">'

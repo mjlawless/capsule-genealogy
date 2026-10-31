@@ -98,6 +98,20 @@ def _migrate(connection: sqlite3.Connection) -> None:
             connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
 
 
+def create_schema(connection: sqlite3.Connection) -> None:
+    """Run schema.sql as ONE transaction.
+
+    Run statement by statement, each of its ~60 CREATEs is its own commit, and a commit waits
+    for the disk: ~0.7s to create a database where the flush is real (Windows; macOS with
+    `fullfsync`), against ~15ms as one transaction. One transaction also means a schema that
+    fails part way leaves nothing behind; the caller must close the connection then, which
+    rolls the transaction back. The file's `PRAGMA foreign_keys` is a no-op inside a
+    transaction, so callers turn foreign keys on first.
+    """
+    schema = _SCHEMA_PATH.read_text(encoding="utf-8")
+    connection.executescript(f"BEGIN;\n{schema}\nCOMMIT;")
+
+
 class Repository:
     """Opens/initializes a SQLite DB from schema.sql and exposes CRUD-append ops."""
 
@@ -105,7 +119,7 @@ class Repository:
         self.connection = sqlite3.connect(str(db_path))
         try:
             self.connection.execute("PRAGMA foreign_keys = ON")
-            self.connection.executescript(_SCHEMA_PATH.read_text(encoding="utf-8"))
+            create_schema(self.connection)
             _migrate(self.connection)
             self.connection.commit()
         except Exception:

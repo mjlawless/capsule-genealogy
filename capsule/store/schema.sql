@@ -455,7 +455,7 @@ END;
 -- );
 --
 -- M3 — disposition_event: records what happened to a source/persona pair
--- during the guided Ancestry attach flow (capsule export, §5 of docs/plan.md).
+-- during the guided Ancestry attach flow (capsule export).
 --
 -- CREATE TABLE disposition_event (
 --     source_id    TEXT NOT NULL REFERENCES source (id),
@@ -469,8 +469,7 @@ END;
 -- transcription / transcript_field — the machine-transcript layer (REQ-006; NOT evidence)
 -- ---------------------------------------------------------------------------
 --
--- What a vision transcriber READ from a capture's scanned media. Owner ruling R1
--- (2026-09-24): a machine transcript is a derivative reading aid beside the image
+-- What a vision transcriber READ from a capture's scanned media. A machine transcript is a derivative reading aid beside the image
 -- and never the cited evidence, so it lives in these tables and NEVER in
 -- `assertion`; nothing here can raise a grade. A transcribed value enters the
 -- evidence graph only when a human accepts it (correction loop), which is when an
@@ -582,8 +581,7 @@ END;
 -- capture_lifecycle_event — "this capture was replaced by that one" (REQ-011)
 -- ---------------------------------------------------------------------------
 --
--- A LIFECYCLE fact about a capture, not an evidence relation between two documents (owner
--- ruling 2026-10-21): it says which capture to cite, and nothing about the people in either.
+-- A LIFECYCLE fact about a capture, not an evidence relation between two documents: it says which capture to cite, and nothing about the people in either.
 -- `superseded` names the replacement; `reinstated` withdraws the latest supersession. The
 -- current state is the latest event per source. Append-only like everything here: the old
 -- capture, its folder and its assertions are never touched, and a mistake is undone by a

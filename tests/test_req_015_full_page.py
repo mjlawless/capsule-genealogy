@@ -1,6 +1,5 @@
 """REQ-015 §C/§D — ads hidden from the render, and the whole page saved as MHTML.
 
-Owner, 2026-10-29: "hide the ads by default. Add the page.mhtml file to every new capture."
 The render hides ads by the conventions ad networks use and nothing broader (a certificate
 site shows the record in an <embed> or <iframe>). The full page rides as one more media
 item, last, never at the cost of the record. The backend recognizes it by its bytes, never

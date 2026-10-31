@@ -4,7 +4,7 @@
 them [?] — never a confident wrong name. A wrong name is a hard failure; an
 honest [?] is a pass." So the scorer distinguishes an honest miss (marked) from
 a confident one, and only the latter on a hard field fails the gate. A gold
-value the owner has not yet confirmed is `disputed` — reported, never scored
+value not yet confirmed is `disputed` — reported, never scored
 against the transcriber (the eval once found the gold was wrong).
 """
 from __future__ import annotations
@@ -32,7 +32,7 @@ _GOLD = TranscriptGold(
         GoldField(label="Mother's Name", match=[r"^mothers?_name$"], value="Bridget. Kilcoyne", hard=True),
         GoldField(label="Age", match=[r"^age$"], value="46 yrs 6 mos 26 days"),
         GoldField(label="Date of Burial", match=[r"burial.*date|date_of_burial"], value="Jan 21st 1903",
-                  disputed="image shows 'Jany'; owner to confirm"),
+                  disputed="image shows 'Jany'; to be confirmed"),
     ],
 )
 
@@ -119,6 +119,6 @@ def test_gold_files_in_the_repo_load(tmp_path):
     mary = next(g for g in golds if g.name == "nyc-death-1903-mary-lawless")
     assert {f.label for f in mary.fields if f.hard} == {"Father's Name", "Mother's Name"}
     undertaker = next(f for f in mary.fields if f.label == "Undertaker")
-    assert undertaker.value == "Geo. P. McHugh"  # owner-confirmed correction, 2026-09-24
+    assert undertaker.value == "Geo. P. McHugh"  # corrected on review, 2026-09-24
     with pytest.raises(ValueError):
         load_gold(tmp_path / "missing.json")

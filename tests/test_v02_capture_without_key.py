@@ -445,7 +445,7 @@ def test_found_an_unlanded_reading_that_cannot_be_rebuilt_is_read_again(tmp_path
 
 
 def test_a_reinstated_capture_is_never_read_again_from_the_command_line(tmp_path, monkeypatch):
-    """Owner ruling 2026-10-24: a capture is read at most once, by the CLI as by the index.
+    """A capture is read at most once, by the CLI as by the index.
     extract -> reinstate (the reading set aside) -> `capsule extract <id>` is refused without
     a model call, and `--all` no longer counts it as waiting."""
     import pytest

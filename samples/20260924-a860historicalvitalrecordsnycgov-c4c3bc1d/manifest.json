@@ -1,0 +1,54 @@
+{
+  "spec_version": "capture-folder/v1",
+  "capture_id": "20260924-a860historicalvitalrecordsnycgov-c4c3bc1d",
+  "tool_version": "0.0.0",
+  "created_at": "2026-09-24T18:39:00.732594Z",
+  "source": {
+    "id": "c4c3bc1db60c42e0afc50172031851f1",
+    "url": "https://a860-historicalvitalrecords.nyc.gov/view/7686659",
+    "title": "M-K-1886-0002448 - Historical Vital Records of NYC",
+    "site_name": "a860-historicalvitalrecords.nyc.gov",
+    "record_type": "marriage",
+    "gating_status": "public",
+    "copyright_flag": false,
+    "source_quality": "derivative",
+    "source_quality_rationale": "The page is a database index entry with typed fields (Name, Soundex, Type, Borough, Date, Certificate) about a marriage certificate. It embeds/links a PDF of the certificate, but the transcribable content on the HTML page is the index record, not the original document itself.",
+    "page_label": "Select Language",
+    "content_hash": "b76a94fcb3e198ccfe28d7f337228656ebaefb4a61eaac212f35b16dfce9fd5d"
+  },
+  "archive": {
+    "local_snapshot": "snapshot.html",
+    "sha256": "397a715cbbd639b6cdd0ac1be8579e8f4bae5fbf614611d7b41d63341c7c92c3",
+    "captured_at": "2026-09-24T18:39:00.735093Z",
+    "wayback_url": null
+  },
+  "media": [
+    {
+      "path": "media/0-record.pdf",
+      "source_url": null,
+      "mime": "application/pdf",
+      "provenance": "render:page-pdf",
+      "width": 1220,
+      "height": 656
+    },
+    {
+      "path": "media/1-m-k-1886-0002448.pdf",
+      "source_url": "https://dorisarchive.blob.core.windows.net/reference/REC0051_VitalRecords/MarriageCertificates/Kings/1886/M-K-1886-0002448.pdf",
+      "mime": "application/pdf",
+      "provenance": "page:embedded",
+      "width": 2270,
+      "height": 1112
+    }
+  ],
+  "image": "none",
+  "hashes": {
+    "algo": "sha256",
+    "files": {
+      "snapshot.html": "397a715cbbd639b6cdd0ac1be8579e8f4bae5fbf614611d7b41d63341c7c92c3",
+      "extraction.json": "b76a94fcb3e198ccfe28d7f337228656ebaefb4a61eaac212f35b16dfce9fd5d",
+      "citation.json": "e8c62cc950581ca99c93007d1c2d95b0c15ac997c3756048c011eac2cf640d54",
+      "media/0-record.pdf": "e3a1e28362d6ea79207a28f5bf9fc5f53e815231e32ca597d8de2e01d0a54f59",
+      "media/1-m-k-1886-0002448.pdf": "503916e89c6d741f0b3749b9f99495967e6c336adc9a6a3374a2e44145fc2fd7"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use Genealogy Capsule in your work, please cite it as below."
+type: software
+title: "Genealogy Capsule"
+abstract: >-
+  Evidence-grade genealogy capture: a Chrome extension and local backend that turn the record
+  page you are viewing into an archived, cited, hashed source you keep.
+authors:
+  - name: "The Genealogy Capsule authors"
+version: "0.2.8"
+date-released: "2026-10-30"
+license: MIT
+repository-code: "https://github.com/mjlawless/capsule-genealogy"
+keywords:
+  - genealogy
+  - family history
+  - citations
+  - evidence
+  - archiving
+  - chrome-extension

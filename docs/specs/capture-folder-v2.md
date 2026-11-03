@@ -232,3 +232,36 @@ raise a grade (REQ-006 §5.1–5.2). It follows the notes rule:
   gating and redaction record, and the pending capture is marked superseded by it (REQ-011).
   The field lets an interrupted `capsule extract` resume without reading twice.
 - Both are additive and do not change `spec_version`.
+
+## 8. `manifest.json` → `snapshot_added_markup`, and snapshots without Capsule's UI (BUG-029, added 2026-10-30, backward-compatible)
+
+```jsonc
+{ "snapshot_added_markup": ["#capsule-toast", "#claude-agent-glow-border", "html[data-capsule-capturing]"] }
+```
+
+- **`snapshot.html` is the page as the browser serialized it**, so it can also hold markup a
+  browser extension had added to the page at that moment: Capsule's own button
+  (`#capsule-capture-btn`), "Capturing…" toast (`#capsule-toast`), key prompt
+  (`#capsule-key-prompt`) and the status attributes it sets on `<html>`
+  (`data-capsule-capturing`, and `data-capsule-last-outcome`, which holds the previous
+  capture's result), or the overlay an AI assistant paints over a tab it drives
+  (`#claude-agent-glow-border`, `#claude-agent-glow-border-inner`, `#claude-phantom-cursor`).
+- **From extension 0.2.9 on, Capsule cuts its own markup out of the snapshot** before sending
+  it: exactly those elements' and attributes' serialized text is removed from the page's
+  `outerHTML`, and every other byte is as the browser wrote it. Only elements Capsule created
+  (it marks them `data-capsule-ui`) placed directly under `<html>` are cut, and the two
+  attributes only with the values Capsule writes; a page's own element or attribute value that
+  happens to use one of those names is kept. If a piece is not found
+  exactly once, nothing is cut and the snapshot is sent as before. Other extensions' markup is
+  never removed.
+- **`snapshot_added_markup`** lists, as CSS selectors in a fixed order, the known markup above
+  that the snapshot still holds, found in its tags (never in text or scripts), and only with
+  the evidence an extension added it: an element needs the tag, the placement (Capsule's
+  directly under `<html>`, an assistant's overlay and cursor directly under `<body>`) and the
+  fixed-position inline style the extension gives it, or Capsule's `data-capsule-ui` mark; an
+  `<html>` attribute needs the value Capsule writes. A site's own element that merely shares
+  an id is never listed. The snapshot
+  itself is kept exactly as received, since it is the hashed evidence; the field says which
+  parts of it were never the site's. Omitted when there is none, so a clean snapshot's
+  manifest serializes as before. Existing captures are not rewritten.
+- Additive; does not change `spec_version`.

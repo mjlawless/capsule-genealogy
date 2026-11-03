@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.9 — the saved page text no longer includes Capsule's own button
+
+- **Cleaner page text.** Until now the **page text** (`snapshot.html`) was taken while
+  Capsule's own button and its "Capturing…" message were on the page, so most saved copies
+  held them, and a few held the previous capture's result in a status attribute. The extension
+  now leaves exactly Capsule's own markup out of the page text, and nothing else: if it cannot
+  find that markup exactly, it cuts nothing. The page in your tab is never touched. Captures
+  you already have are kept as they are.
+- **Says what other extensions added.** A capture's `manifest.json` can now carry
+  `snapshot_added_markup`, naming known markup that browser extensions (such as an AI
+  assistant's on-screen overlay, or an older Capsule) left in the page text, so a reader knows
+  it was not part of the site's page.
+- **Not yet covered:** the **full page** copy (`page.mhtml`) can still include Capsule's hidden
+  button and status attributes.
+- **Site terms, said up front.** The welcome tab and the Help page now say what the README
+  always did: some sites limit what you may save, so use Capsule within the terms of the
+  sites you use.
+
 ## 0.2.8 — security updates, and sample captures to look at
 
 - **Security update: the image library.** Capsule opens the record images it saves to check

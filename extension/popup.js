@@ -137,9 +137,86 @@ async function grabPage(grabMedia, withBytes, maxItems, maxBytes) {
   // Capsule's own key prompt (v0.2) is not part of the record: drop it before serializing.
   const prompt = document.getElementById("capsule-key-prompt");
   if (prompt) prompt.remove();
+
+  // A copy of content.js's snapshot cut (this function is injected on its own and cannot call
+  // it; a test keeps the two identical): the page's outerHTML with exactly Capsule's button,
+  // toast and status attributes cut out, or the page untouched when a cut is not exact.
+  const SNAPSHOT_UI_IDS = ["capsule-capture-btn", "capsule-toast", "capsule-key-prompt"];
+  const SNAPSHOT_HTML_ATTRS = ["data-capsule-capturing", "data-capsule-last-outcome"];
+  // Set on every element Capsule creates. Only an element carrying it, placed directly under
+  // <html> where Capsule puts its UI, is cut: a page's own element that happens to use one
+  // of these ids is the site's, and stays.
+  const SNAPSHOT_UI_MARK = "data-capsule-ui";
+
+  // Only the values Capsule writes are cut: "true" while capturing, and a result carrying its
+  // time (empty from some older extensions). Any other value is the site's, and stays.
+  function isCapsuleStatus(name, value) {
+    if (name === "data-capsule-capturing") return value === "true";
+    if (!value) return true;
+    try {
+      const outcome = JSON.parse(value);
+      return !!outcome && typeof outcome === "object" && !Array.isArray(outcome) &&
+        typeof outcome.at === "string";
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function cutCapsuleMarkup(html, innerLength, attrPieces, nodePieces) {
+    const close = "</html>";
+    const startEnd = html.length - innerLength - close.length;
+    if (startEnd <= 0 || !html.endsWith(close)) return html;
+    const cutOnce = (text, piece) => {
+      const at = piece ? text.indexOf(piece) : -1;
+      if (at < 0 || text.indexOf(piece, at + 1) >= 0) return null;
+      return text.slice(0, at) + text.slice(at + piece.length);
+    };
+    // Attributes are cut from the <html> start tag only, nodes from what follows it.
+    let start = html.slice(0, startEnd);
+    let rest = html.slice(startEnd);
+    for (const piece of attrPieces) {
+      const next = cutOnce(start, piece);
+      if (next === null) return html;
+      start = next;
+    }
+    for (const piece of nodePieces) {
+      const next = cutOnce(rest, piece);
+      if (next === null) return html;
+      rest = next;
+    }
+    return start + rest;
+  }
+
+  function pageSnapshot() {
+    const root = document.documentElement;
+    const html = root.outerHTML;
+    try {
+      const attrPieces = [];
+      for (const name of SNAPSHOT_HTML_ATTRS) {
+        if (!root.hasAttribute(name)) continue;
+        if (!isCapsuleStatus(name, root.getAttribute(name))) continue;
+        // Serialized by the browser itself, so its escaping matches the start tag's.
+        const probe = document.createElement("span");
+        probe.setAttribute(name, root.getAttribute(name));
+        const tag = probe.outerHTML;
+        attrPieces.push(tag.slice("<span".length, tag.length - "></span>".length));
+      }
+      const nodePieces = [];
+      for (const id of SNAPSHOT_UI_IDS) {
+        const el = document.getElementById(id);
+        if (el && el.parentNode === root && el.hasAttribute(SNAPSHOT_UI_MARK)) {
+          nodePieces.push(el.outerHTML);
+        }
+      }
+      return cutCapsuleMarkup(html, root.innerHTML.length, attrPieces, nodePieces);
+    } catch (_e) {
+      return html; // never let the cut break a capture
+    }
+  }
+
   const page = {
     url: location.href,
-    html: withBytes ? document.documentElement.outerHTML : "",
+    html: withBytes ? pageSnapshot() : "",
     remote: [], // http(s) media -> { url, filename, mime } (bytes fetched by the popup)
     inline: [], // blob:/data: media -> { filename, mime, source_url, data_base64 }
     origins: [], // distinct http(s) origins, for the permission prompt

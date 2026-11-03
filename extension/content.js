@@ -31,6 +31,7 @@
     if (!el) {
       el = document.createElement("div");
       el.id = TOAST_ID;
+      el.setAttribute(SNAPSHOT_UI_MARK, "");
       el.style.cssText =
         "position:fixed;bottom:56px;right:12px;z-index:2147483647;max-width:320px;" +
         "padding:8px 12px;border-radius:6px;font:12px/1.4 system-ui,sans-serif;" +
@@ -41,6 +42,88 @@
     el.textContent = text;
     clearTimeout(el._t);
     el._t = setTimeout(() => el.remove(), 6000);
+  }
+
+  // An archived record must not contain the instrument that made it. The page snapshot is the
+  // page's own serialization (outerHTML) with exactly Capsule's markup cut out of the string:
+  // its button, toast and key prompt, and the two status attributes it sets on <html> (one of
+  // which holds the PREVIOUS capture's result). Cutting the string, rather than serializing a
+  // copy of the DOM, keeps every other byte as the browser wrote it (a copy in a detached
+  // document escapes <noscript> text differently) and never touches the live page. A piece
+  // not found exactly once is left in: the snapshot is then exactly as before, never guessed
+  // at. popup.js grabPage carries a copy, since it runs as an injected function and cannot
+  // call this one; a test keeps the two identical.
+  const SNAPSHOT_UI_IDS = ["capsule-capture-btn", "capsule-toast", "capsule-key-prompt"];
+  const SNAPSHOT_HTML_ATTRS = ["data-capsule-capturing", "data-capsule-last-outcome"];
+  // Set on every element Capsule creates. Only an element carrying it, placed directly under
+  // <html> where Capsule puts its UI, is cut: a page's own element that happens to use one
+  // of these ids is the site's, and stays.
+  const SNAPSHOT_UI_MARK = "data-capsule-ui";
+
+  // Only the values Capsule writes are cut: "true" while capturing, and a result carrying its
+  // time (empty from some older extensions). Any other value is the site's, and stays.
+  function isCapsuleStatus(name, value) {
+    if (name === "data-capsule-capturing") return value === "true";
+    if (!value) return true;
+    try {
+      const outcome = JSON.parse(value);
+      return !!outcome && typeof outcome === "object" && !Array.isArray(outcome) &&
+        typeof outcome.at === "string";
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function cutCapsuleMarkup(html, innerLength, attrPieces, nodePieces) {
+    const close = "</html>";
+    const startEnd = html.length - innerLength - close.length;
+    if (startEnd <= 0 || !html.endsWith(close)) return html;
+    const cutOnce = (text, piece) => {
+      const at = piece ? text.indexOf(piece) : -1;
+      if (at < 0 || text.indexOf(piece, at + 1) >= 0) return null;
+      return text.slice(0, at) + text.slice(at + piece.length);
+    };
+    // Attributes are cut from the <html> start tag only, nodes from what follows it.
+    let start = html.slice(0, startEnd);
+    let rest = html.slice(startEnd);
+    for (const piece of attrPieces) {
+      const next = cutOnce(start, piece);
+      if (next === null) return html;
+      start = next;
+    }
+    for (const piece of nodePieces) {
+      const next = cutOnce(rest, piece);
+      if (next === null) return html;
+      rest = next;
+    }
+    return start + rest;
+  }
+
+  function pageSnapshot() {
+    const root = document.documentElement;
+    const html = root.outerHTML;
+    try {
+      const attrPieces = [];
+      for (const name of SNAPSHOT_HTML_ATTRS) {
+        if (!root.hasAttribute(name)) continue;
+        if (!isCapsuleStatus(name, root.getAttribute(name))) continue;
+        // Serialized by the browser itself, so its escaping matches the start tag's.
+        const probe = document.createElement("span");
+        probe.setAttribute(name, root.getAttribute(name));
+        const tag = probe.outerHTML;
+        attrPieces.push(tag.slice("<span".length, tag.length - "></span>".length));
+      }
+      const nodePieces = [];
+      for (const id of SNAPSHOT_UI_IDS) {
+        const el = document.getElementById(id);
+        if (el && el.parentNode === root && el.hasAttribute(SNAPSHOT_UI_MARK)) {
+          nodePieces.push(el.outerHTML);
+        }
+      }
+      return cutCapsuleMarkup(html, root.innerHTML.length, attrPieces, nodePieces);
+    } catch (_e) {
+      return html; // never let the cut break a capture
+    }
   }
 
   // v0.2 — after a capture made WITHOUT an Anthropic key, say once, briefly, what a key adds.
@@ -58,6 +141,7 @@
     document.getElementById(KEY_PROMPT_ID)?.remove();
     const card = document.createElement("div");
     card.id = KEY_PROMPT_ID;
+    card.setAttribute(SNAPSHOT_UI_MARK, "");
     card.setAttribute("role", "dialog");
     card.setAttribute("aria-label", "Connect an Anthropic API key to Capsule");
     card.style.cssText =
@@ -316,7 +400,7 @@
       const res = await chrome.runtime.sendMessage({
         type: EVENT,
         url: location.href,
-        html: document.documentElement.outerHTML,
+        html: pageSnapshot(),
         note: note || undefined,
         // Bytes we already hold, plus the URLs the worker must fetch for us. All empty on
         // an Ancestry (apid) capture — its image comes from the armed Download.
@@ -550,7 +634,7 @@
         type: "capsule:capture-ancestry-image",
         apid,
         recordUrl: location.href,
-        recordHtml: document.documentElement.outerHTML,
+        recordHtml: pageSnapshot(),
         viewerUrl,
         // REQ-009 — an explicit label wins; otherwise one is derived when the caller asked
         // for an image other than the record page's own.
@@ -676,6 +760,7 @@
     if (document.getElementById(BTN_ID)) return;
     const btn = document.createElement("button");
     btn.id = BTN_ID;
+    btn.setAttribute(SNAPSHOT_UI_MARK, "");
     btn.type = "button";
     btn.textContent = "⬇ Capsule";
     btn.title = "Capture this page into Capsule";

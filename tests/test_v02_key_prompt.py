@@ -68,7 +68,7 @@ def _run(scenario: str) -> dict:
     source = _CONTENT.read_text(encoding="utf-8")
     consts = "\n".join(
         line.strip() for line in source.splitlines()
-        if re.match(r"\s*const (KEY_PROMPT_|ANTHROPIC_KEYS_URL)", line)
+        if re.match(r"\s*const (KEY_PROMPT_|ANTHROPIC_KEYS_URL|SNAPSHOT_UI_MARK)", line)
     )
     start = source.index("  async function showKeyPrompt(")
     end = source.index("\n  }\n", start) + 4
@@ -170,7 +170,7 @@ def test_found_the_prompt_is_never_archived_with_a_record():
     popup = (ext / "popup.js").read_text(encoding="utf-8")
     render = (ext / "render-pdf.js").read_text(encoding="utf-8")
     assert content.count("document.getElementById(KEY_PROMPT_ID)?.remove();") >= 3
-    for path_start in ("async function capture(note, opts)", "recordHtml: document"):
+    for path_start in ("async function capture(note, opts)", "recordHtml: pageSnapshot()"):
         before = content[: content.index(path_start)] if path_start.startswith("record") else (
             content[content.index(path_start):content.index("capturing = true;",
                                                             content.index(path_start))]

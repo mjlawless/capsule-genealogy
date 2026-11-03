@@ -206,7 +206,8 @@ and delete it once imported.</li>
 visits a site by itself and never crawls.</li>
 <li>Everything stays on your computer; Capsule never publishes a page anywhere. Pages
 from subscription sites are flagged so you know not to share them.</li>
-<li>Use it within the terms of the sites you visit.</li>
+<li>Some sites limit what you may save, so use Capsule within the terms of the sites you
+use.</li>
 </ul>
 
 <h2>Help</h2>

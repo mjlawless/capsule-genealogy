@@ -64,6 +64,7 @@ from capsule.contracts.evidence import (
     Source,
     _require_utc,
 )
+from capsule.capture.added_markup import find_added_markup
 from capsule.pipeline.household import HouseholdMember
 from capsule.pipeline.render_check import (
     EVIDENCE_IMAGE_STATUSES,
@@ -841,6 +842,19 @@ def write_capture(
             manifest = {
                 **{k: v for k, v in manifest.items() if k != "hashes"},
                 "extension_version": extension_version,
+                "hashes": manifest["hashes"],
+            }
+        added_markup = find_added_markup(snapshot_html) if snapshot_html is not None else ()
+        if added_markup:
+            # Markup a browser extension had added to the page when it was saved: Capsule's own
+            # button, toast and status attributes (from an extension that did not yet cut them
+            # out), or an AI assistant's overlay. The snapshot stays exactly as received, since
+            # it is the hashed evidence; this says which parts of it were never the site's.
+            # Additive and omitted when there is none, so a clean snapshot's manifest
+            # serializes exactly as before.
+            manifest = {
+                **{k: v for k, v in manifest.items() if k != "hashes"},
+                "snapshot_added_markup": list(added_markup),
                 "hashes": manifest["hashes"],
             }
         if media_warnings:

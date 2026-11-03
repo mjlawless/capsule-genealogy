@@ -7,8 +7,8 @@ abstract: >-
   page you are viewing into an archived, cited, hashed source you keep.
 authors:
   - name: "The Genealogy Capsule authors"
-version: "0.2.8"
-date-released: "2026-10-30"
+version: "0.2.9"
+date-released: "2026-11-03"
 license: MIT
 repository-code: "https://github.com/mjlawless/capsule-genealogy"
 keywords:
